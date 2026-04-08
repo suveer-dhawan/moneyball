@@ -317,7 +317,7 @@ function InsightsScreen({ user, budgets }: { user: any, budgets: any[] }) {
 
   return (
     <main className="flex flex-col max-w-md mx-auto shadow-2xl relative min-h-[100dvh] pb-32 bg-gray-50">
-      <TopHeader title="Insights" />
+      <TopHeader />
       <div className="pt-6 px-6">
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col items-center justify-center mb-6">
           <span className="text-gray-400 text-sm font-medium uppercase tracking-wider mb-2">Total Spent</span>
@@ -451,7 +451,7 @@ function SettingsScreen({ user, categories, budgets, fetchData }: { user: any, c
 
   return (
     <main className="flex flex-col max-w-md mx-auto shadow-2xl relative min-h-[100dvh] pb-32 bg-gray-50">
-      <TopHeader title="Settings" />
+      <TopHeader />
       <div className="pt-6 px-6">
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-6">
           <div className="p-6 border-b border-gray-100 bg-gray-50/50">
