@@ -48,13 +48,13 @@ Moneyball is a premium, mobile-first personal finance and budgeting application 
 3. **Set up Environment Variables:**
 Create a `.env.local` file in the root directory and add your Supabase project keys:
 
-    NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+- NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+- NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 4. **Database Setup:**
 Run the following SQL queries in your Supabase SQL Editor to generate the necessary tables and security policies:
 
-Note: Ensure Row Level Security (RLS) is enabled and policies are set to allow authenticated users to `INSERT`, `SELECT`, `UPDATE`, and `DELETE` their own rows (`auth.uid() = user_id`).
+**Note**: Ensure Row Level Security (RLS) is enabled and policies are set to allow authenticated users to `INSERT`, `SELECT`, `UPDATE`, and `DELETE` their own rows (`auth.uid() = user_id`).
 
 - transactions (id, created_at, amount, category, notes, date, user_id)
 - user_categories (id, created_at, name, user_id)
