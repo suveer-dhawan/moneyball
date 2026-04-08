@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Delete, Check, Calendar, PenLine, Home, PieChart as PieChartIcon, Settings, Loader2, Trash2, Plus, X, ChevronDown, ChevronUp, Target, ChevronLeft } from "lucide-react";
+import { Delete, Check, Calendar, PenLine, Home, PieChart as PieChartIcon, Settings, Loader2, Trash2, Plus, X, ChevronDown, ChevronUp, Target, ChevronLeft, Wallet } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { createClient } from "../lib/supabase";
 
@@ -97,12 +97,14 @@ function MoneyballApp({ user }: { user: any }) {
   const [activeTab, setActiveTab] = useState("add");
   const [categories, setCategories] = useState<any[]>([]);
   const [budgets, setBudgets] = useState<any[]>([]);
+  const [income, setIncome] = useState<any[]>([]); // NEW: Income State
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     setLoadingData(true);
+    // Fetch Categories
     const { data: catData } = await supabase.from('user_categories').select('*').eq('user_id', user.id).order('created_at', { ascending: true });
     if (catData && catData.length > 0) setCategories(catData);
     else {
@@ -111,15 +113,22 @@ function MoneyballApp({ user }: { user: any }) {
       const { data: newCatData } = await supabase.from('user_categories').select('*').eq('user_id', user.id).order('created_at', { ascending: true });
       if (newCatData) setCategories(newCatData);
     }
+    // Fetch Budgets
     const { data: budData } = await supabase.from('budgets').select('*').eq('user_id', user.id);
     if (budData) setBudgets(budData);
+    
+    // NEW: Fetch Income
+    const { data: incData } = await supabase.from('income').select('*').eq('user_id', user.id).order('date', { ascending: false });
+    if (incData) setIncome(incData);
+
     setLoadingData(false);
   };
 
   return (
     <div className="bg-gray-50 min-h-[100dvh]">
       {activeTab === "add" && <EntryScreen user={user} categories={categories} loadingCats={loadingData} />}
-      {activeTab === "summary" && <InsightsScreen user={user} budgets={budgets} />}
+      {activeTab === "income" && <IncomeScreen user={user} income={income} fetchData={fetchData} />}
+      {activeTab === "summary" && <InsightsScreen user={user} budgets={budgets} income={income} />}
       {activeTab === "settings" && <SettingsScreen user={user} categories={categories} budgets={budgets} fetchData={fetchData} />}
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
@@ -316,9 +325,83 @@ function EntryScreen({ user, categories, loadingCats }: { user: any, categories:
 }
 
 // ----------------------------------------------------------------
-// 2. INSIGHTS SCREEN
+// NEW: INCOME SCREEN
 // ----------------------------------------------------------------
-function InsightsScreen({ user, budgets }: { user: any, budgets: any[] }) {
+function IncomeScreen({ user, income, fetchData }: { user: any, income: any[], fetchData: () => void }) {
+  const [amount, setAmount] = useState("");
+  const [source, setSource] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleSaveIncome = async () => {
+    if (!amount || !source) return alert("Please enter an amount and source.");
+    setIsAdding(true);
+    
+    const numAmount = parseFloat(amount);
+    const { error } = await supabase.from('income').insert({
+      amount: numAmount,
+      source: source,
+      date: new Date().toISOString(),
+      user_id: user.id
+    });
+
+    if (!error) {
+      if (navigator.vibrate) navigator.vibrate(50);
+      setAmount(""); setSource(""); fetchData();
+    } else {
+      alert("Error saving income: " + error.message);
+    }
+    setIsAdding(false);
+  };
+
+  const handleDeleteIncome = async (id: string) => {
+    if (window.confirm("Delete this income entry?")) {
+      await supabase.from('income').delete().eq('id', id);
+      fetchData();
+    }
+  };
+
+  return (
+    <main className="flex flex-col max-w-md mx-auto shadow-2xl relative min-h-[100dvh] pb-32 bg-gray-50 pt-[env(safe-area-inset-top)]">
+      <TopHeader />
+      <div className="pt-6 px-6">
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Log Paycheck</h2>
+          <div className="space-y-4">
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
+              <input type="text" inputMode="decimal" pattern="[0-9]*" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-black text-[16px]" />
+            </div>
+            <input type="text" placeholder="Source (e.g. Salary, Side Hustle)" value={source} onChange={(e) => setSource(e.target.value)} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-black text-[16px]" />
+            <button onClick={handleSaveIncome} disabled={isAdding} className="w-full flex items-center justify-center space-x-2 bg-emerald-500 text-white py-3.5 rounded-xl font-bold active:scale-[0.98] transition-transform shadow-sm disabled:opacity-50">
+              {isAdding ? <Loader2 size={20} className="animate-spin" /> : <span>Add Income</span>}
+            </button>
+          </div>
+        </div>
+
+        <h3 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">Income History</h3>
+        <div className="space-y-3">
+          {income.length === 0 ? <p className="text-gray-400 text-sm italic">No income logged yet.</p> : income.map((inc) => (
+            <div key={inc.id} className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+              <div className="flex flex-col">
+                <span className="font-semibold text-gray-900">{inc.source}</span>
+                <span className="text-xs text-gray-500 mt-1">{new Date(inc.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+              </div>
+              <div className="flex items-center space-x-4">
+                <span className="font-bold text-emerald-500">+${inc.amount.toFixed(2)}</span>
+                <button onClick={() => handleDeleteIncome(inc.id)} className="text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </main>
+  );
+}
+
+// ----------------------------------------------------------------
+// 2. INSIGHTS SCREEN (Upgraded with Savings Engine)
+// ----------------------------------------------------------------
+function InsightsScreen({ user, budgets, income }: { user: any, budgets: any[], income: any[] }) {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
@@ -341,20 +424,26 @@ function InsightsScreen({ user, budgets }: { user: any, budgets: any[] }) {
     transactions.forEach(tx => {
       total += tx.amount;
       const groupName = tx.category.includes(" - ") ? tx.category.split(" - ")[0].trim() : tx.category;
-      
       if (!grouped[groupName]) grouped[groupName] = { total: 0, subs: {} };
       grouped[groupName].total += tx.amount;
       grouped[groupName].subs[tx.category] = (grouped[groupName].subs[tx.category] || 0) + tx.amount;
     });
 
-    const data = Object.keys(grouped).map(key => ({ 
-      name: key, 
-      value: grouped[key].total,
-      subs: grouped[key].subs
-    })).sort((a, b) => b.value - a.value);
-    
+    const data = Object.keys(grouped).map(key => ({ name: key, value: grouped[key].total, subs: grouped[key].subs })).sort((a, b) => b.value - a.value);
     return { chartData: data, totalSpent: total };
   }, [transactions]);
+
+  // CALCULATION ENGINE: Filter income for this month and calculate savings
+  const { totalIncome, netSavings } = useMemo(() => {
+    const date = new Date();
+    const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+    
+    const thisMonthIncome = income.filter(inc => new Date(inc.date) >= firstDayOfMonth);
+    const totalInc = thisMonthIncome.reduce((sum, inc) => sum + inc.amount, 0);
+    const net = totalInc - totalSpent;
+    
+    return { totalIncome: totalInc, netSavings: net };
+  }, [income, totalSpent]);
 
   const toggleGroup = (name: string) => { setExpandedGroups(prev => ({ ...prev, [name]: !prev[name] })); };
 
@@ -366,7 +455,6 @@ function InsightsScreen({ user, budgets }: { user: any, budgets: any[] }) {
     const percent = Math.min((amountSpent / limit) * 100, 100);
     const isOver = amountSpent > limit;
     const isWarning = percent >= 80 && !isOver; 
-    
     let finalColor = barColor; 
     if (isWarning) finalColor = '#F59E0B'; 
     if (isOver) finalColor = '#EF4444'; 
@@ -387,10 +475,30 @@ function InsightsScreen({ user, budgets }: { user: any, budgets: any[] }) {
     <main className="flex flex-col max-w-md mx-auto shadow-2xl relative min-h-[100dvh] pb-32 bg-gray-50 pt-[env(safe-area-inset-top)]">
       <TopHeader />
       <div className="pt-6 px-6">
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col items-center justify-center mb-6">
-          <span className="text-gray-400 text-sm font-medium uppercase tracking-wider mb-2">Total Spent</span>
-          <span className="text-5xl font-light text-gray-900 tracking-tighter">${totalSpent.toFixed(2)}</span>
+        
+        {/* WEALTH DASHBOARD (Upgraded Card) */}
+        <div className="bg-gray-900 p-6 rounded-3xl shadow-xl mb-6 text-white overflow-hidden relative">
+          {/* Subtle background decoration */}
+          <div className="absolute -right-10 -top-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl"></div>
+          
+          <span className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-1 block">Net Savings (This Month)</span>
+          <span className={`text-5xl font-light tracking-tighter block mb-6 ${netSavings < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+             {netSavings < 0 ? '-' : ''}${Math.abs(netSavings).toFixed(2)}
+          </span>
+          
+          <div className="flex justify-between items-center pt-4 border-t border-gray-800">
+            <div>
+              <span className="text-gray-500 text-xs uppercase block mb-0.5">Income</span>
+              <span className="font-semibold">${totalIncome.toFixed(2)}</span>
+            </div>
+            <div className="text-right">
+              <span className="text-gray-500 text-xs uppercase block mb-0.5">Spent</span>
+              <span className="font-semibold">${totalSpent.toFixed(2)}</span>
+            </div>
+          </div>
         </div>
+
+        {/* ... The rest of your pie chart code stays exactly the same from here down ... */}
 
         {chartData.length > 0 ? (
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 mb-6">
@@ -548,6 +656,10 @@ function BottomNav({ activeTab, setActiveTab }: { activeTab: string, setActiveTa
       <button onClick={() => setActiveTab("add")} className={`flex flex-col items-center space-y-1 transition-colors ${activeTab === "add" ? "text-black" : "text-gray-400"}`}>
         <Home size={24} className={activeTab === "add" ? "stroke-[2.5px]" : ""} />
         <span className="text-[10px] font-semibold">Entry</span>
+      </button>
+      <button onClick={() => setActiveTab("income")} className={`flex flex-col items-center space-y-1 transition-colors ${activeTab === "income" ? "text-black" : "text-gray-400"}`}>
+        <Wallet size={24} className={activeTab === "income" ? "stroke-[2.5px]" : ""} />
+        <span className="text-[10px] font-semibold">Income</span>
       </button>
       <button onClick={() => setActiveTab("summary")} className={`flex flex-col items-center space-y-1 transition-colors ${activeTab === "summary" ? "text-black" : "text-gray-400"}`}>
         <PieChartIcon size={24} className={activeTab === "summary" ? "stroke-[2.5px]" : ""} />
