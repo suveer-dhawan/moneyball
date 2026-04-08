@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Delete, Check, Calendar, PenLine, Home, PieChart as PieChartIcon, Settings, Loader2, Trash2, Plus, X, ChevronDown, ChevronUp, Target } from "lucide-react";
+import { Delete, Check, Calendar, PenLine, Home, PieChart as PieChartIcon, Settings, Loader2, Trash2, Plus, X, ChevronDown, ChevronUp, Target, ChevronLeft } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { createClient } from "../lib/supabase";
 
@@ -75,14 +75,12 @@ function LoginScreen() {
 }
 
 // ----------------------------------------------------------------
-// TOP HEADER COMPONENT (New)
-// ----------------------------------------------------------------
-// ----------------------------------------------------------------
-// TOP HEADER COMPONENT (The Premium Brand Pill)
+// TOP HEADER COMPONENT (Notch-Aware)
 // ----------------------------------------------------------------
 function TopHeader({ rightNode }: { rightNode?: React.ReactNode }) {
   return (
-    <div className="sticky top-4 z-50 w-full px-4 flex justify-center pointer-events-none">
+    // Added pt-[calc(env(safe-area-inset-top)+16px)] so it dynamically clears the iPhone notch
+    <div className="sticky z-50 w-full px-4 pt-[calc(env(safe-area-inset-top)+16px)] pb-4 flex justify-center pointer-events-none">
       <header className="flex items-center space-x-2 px-6 py-3 bg-gray-900/95 backdrop-blur-md rounded-full shadow-xl pointer-events-auto">
         <Target size={18} className="text-emerald-400" />
         <h1 className="text-sm font-bold tracking-widest uppercase text-white">Moneyball</h1>
@@ -129,7 +127,7 @@ function MoneyballApp({ user }: { user: any }) {
 }
 
 // ----------------------------------------------------------------
-// 1. ENTRY SCREEN
+// 1. ENTRY SCREEN (With Toasts, Haptics, and Modal)
 // ----------------------------------------------------------------
 function EntryScreen({ user, categories, loadingCats }: { user: any, categories: any[], loadingCats: boolean }) {
   const [amount, setAmount] = useState("0");
@@ -137,12 +135,24 @@ function EntryScreen({ user, categories, loadingCats }: { user: any, categories:
   const [isToday, setIsToday] = useState(true);
   const [note, setNote] = useState("");
   const [recentTx, setRecentTx] = useState<any[]>([]);
+  
+  // New States for Phase 1
+  const [toastMsg, setToastMsg] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [allMonthTx, setAllMonthTx] = useState<any[]>([]);
 
   useEffect(() => { fetchTransactions(); }, []);
 
   const fetchTransactions = async () => {
-    const { data } = await supabase.from('transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }).limit(10);
+    const { data } = await supabase.from('transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }).limit(5);
     if (data) setRecentTx(data);
+  };
+
+  const fetchAllMonthTransactions = async () => {
+    const date = new Date();
+    const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).toISOString();
+    const { data } = await supabase.from('transactions').select('*').eq('user_id', user.id).gte('date', firstDay).order('date', { ascending: false });
+    if (data) setAllMonthTx(data);
   };
 
   const handlePress = (val: string) => {
@@ -158,30 +168,60 @@ function EntryScreen({ user, categories, loadingCats }: { user: any, categories:
   const handleDelete = () => { amount.length === 1 ? setAmount("0") : setAmount((prev) => prev.slice(0, -1)); };
 
   const handleSave = async () => {
-    if (amount === "0" || !category) return alert("Please enter an amount and select a category.");
+    if (amount === "0" || !category) {
+      if (navigator.vibrate) navigator.vibrate([20, 50, 20]); // Error vibration pattern
+      return alert("Please enter an amount and select a category.");
+    }
+    
     const numAmount = parseFloat(amount);
     const txDate = new Date();
     if (!isToday) txDate.setDate(txDate.getDate() - 1);
 
     const { error } = await supabase.from('transactions').insert({ amount: numAmount, category, notes: note, date: txDate.toISOString(), user_id: user.id });
+    
     if (!error) {
-      setAmount("0"); setCategory(""); setNote(""); setIsToday(true); fetchTransactions();
-    } else alert("Error: " + error.message);
+      // PHASE 1: Haptic & Toast Feedback
+      if (navigator.vibrate) navigator.vibrate(50); // Single success tick
+      setToastMsg(`Saved $${numAmount} for ${category}`);
+      setTimeout(() => setToastMsg(""), 2500);
+
+      setAmount("0"); setCategory(""); setNote(""); setIsToday(true); 
+      fetchTransactions();
+      if (isModalOpen) fetchAllMonthTransactions(); // Refresh modal if it's magically open
+    } else {
+      alert("Error: " + error.message);
+    }
   };
 
   const handleDeleteTx = async (id: string) => {
     if (window.confirm("Delete this transaction?")) {
       await supabase.from('transactions').delete().eq('id', id);
       fetchTransactions();
+      fetchAllMonthTransactions(); // Keep modal perfectly synced
     }
+  };
+
+  const openModal = () => {
+    fetchAllMonthTransactions();
+    setIsModalOpen(true);
   };
 
   return (
     <main className="flex flex-col max-w-md mx-auto shadow-2xl relative min-h-[100dvh] pb-32 bg-gray-50">
+      
+      {/* Toast Notification */}
+      {toastMsg && (
+        <div className="fixed top-28 left-1/2 -translate-x-1/2 z-[60] transition-all duration-300">
+          <div className="bg-gray-900 text-white px-5 py-3 rounded-full shadow-2xl text-sm font-medium flex items-center space-x-2 border border-gray-700/50">
+            <Check size={16} className="text-emerald-400" />
+            <span>{toastMsg}</span>
+          </div>
+        </div>
+      )}
+
       <TopHeader />
       
-      {/* 1. Restored Top Display Padding */}
-      <div className="flex flex-col items-center justify-center px-6 py-6 bg-white rounded-b-3xl shadow-sm z-10 pt-6">
+      <div className="flex flex-col items-center justify-center px-6 py-6 bg-white rounded-b-3xl shadow-sm z-10 pt-6 -mt-[env(safe-area-inset-top)]">
         <h1 className="text-6xl font-light text-gray-900 tracking-tighter mb-4">${amount}</h1>
         <div className="flex space-x-3 mb-4 w-full justify-center">
           <button onClick={() => setIsToday(!isToday)} className="flex items-center space-x-1.5 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-full text-sm font-medium text-gray-600 transition-colors">
@@ -195,7 +235,6 @@ function EntryScreen({ user, categories, loadingCats }: { user: any, categories:
         <p className="text-gray-400 font-medium text-sm h-5">{category ? <span className="text-black bg-gray-100 px-3 py-1 rounded-md">{category}</span> : "Select a category"}</p>
       </div>
 
-      {/* 2. Category Slider */}
       <div className="flex overflow-x-auto py-4 px-4 space-x-2 no-scrollbar shrink-0 min-h-[76px] items-center">
         {loadingCats ? <div className="w-full flex justify-center text-gray-400"><Loader2 className="animate-spin" size={20} /></div> : 
           categories.map((cat) => (
@@ -204,7 +243,6 @@ function EntryScreen({ user, categories, loadingCats }: { user: any, categories:
         }
       </div>
 
-      {/* 3. Balanced Numpad (h-[64px]) */}
       <div className="grid grid-cols-3 gap-2 px-6 pb-4">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => <button key={num} onClick={() => handlePress(num.toString())} className="flex items-center justify-center bg-white text-2xl font-normal text-gray-800 rounded-2xl shadow-sm active:bg-gray-200 h-[64px]">{num}</button>)}
         <button onClick={() => handlePress(".")} className="flex items-center justify-center bg-white text-2xl font-normal text-gray-800 rounded-2xl shadow-sm active:bg-gray-200 h-[64px]">.</button>
@@ -212,7 +250,6 @@ function EntryScreen({ user, categories, loadingCats }: { user: any, categories:
         <button onClick={handleDelete} className="flex items-center justify-center bg-gray-200 text-gray-700 rounded-2xl shadow-sm active:bg-gray-300 h-[64px]"><Delete size={24} /></button>
       </div>
 
-      {/* 4. Restored Save Button Padding */}
       <div className="px-6 pb-6">
         <button onClick={handleSave} className="w-full flex items-center justify-center space-x-2 bg-black text-white py-4 rounded-2xl text-lg font-bold active:scale-[0.98] transition-transform shadow-lg"><span>Save Entry</span><Check size={20} /></button>
       </div>
@@ -235,14 +272,51 @@ function EntryScreen({ user, categories, loadingCats }: { user: any, categories:
               </div>
             </div>
           ))}
+          
+          {/* Phase 1: View All Ledger Button */}
+          {recentTx.length > 0 && (
+            <button onClick={openModal} className="w-full text-center py-3 text-sm font-semibold text-gray-400 hover:text-gray-900 transition-colors">
+              View all month activity
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Phase 1: Full Ledger Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[100] bg-gray-50 flex flex-col pt-[env(safe-area-inset-top)] animate-in slide-in-from-bottom-full duration-300">
+          <header className="flex justify-between items-center px-6 py-4 bg-white border-b border-gray-100 shadow-sm">
+            <button onClick={() => setIsModalOpen(false)} className="p-2 -ml-2 text-gray-400 hover:text-gray-900"><ChevronLeft size={24} /></button>
+            <h2 className="font-bold text-gray-900 text-lg">This Month</h2>
+            <div className="w-8" /> {/* Spacer for centering */}
+          </header>
+          
+          <div className="flex-1 overflow-y-auto p-6 space-y-3 pb-32">
+            {allMonthTx.length === 0 ? <p className="text-center text-gray-400 mt-10">No entries this month.</p> : allMonthTx.map((tx) => (
+              <div key={tx.id} className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                <div className="flex flex-col">
+                  <span className="font-semibold text-gray-900">{tx.category}</span>
+                  <div className="flex items-center text-xs text-gray-500 mt-1 space-x-2">
+                    <span>{new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                    {tx.notes && (<><span>•</span><span className="italic max-w-[120px] truncate">{tx.notes}</span></>)}
+                  </div>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <span className="font-bold text-gray-900">${tx.amount.toFixed(2)}</span>
+                  <button onClick={() => handleDeleteTx(tx.id)} className="text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
     </main>
   );
 }
 
 // ----------------------------------------------------------------
-// 2. INSIGHTS SCREEN (Now with Smart Drill-downs)
+// 2. INSIGHTS SCREEN
 // ----------------------------------------------------------------
 function InsightsScreen({ user, budgets }: { user: any, budgets: any[] }) {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -260,7 +334,6 @@ function InsightsScreen({ user, budgets }: { user: any, budgets: any[] }) {
     fetchThisMonth();
   }, [user.id]);
 
-  // SMART GROUPING: Retain sub-categories for the drill-down
   const { chartData, totalSpent } = useMemo(() => {
     let total = 0;
     const grouped: Record<string, { total: number, subs: Record<string, number> }> = {};
@@ -283,11 +356,8 @@ function InsightsScreen({ user, budgets }: { user: any, budgets: any[] }) {
     return { chartData: data, totalSpent: total };
   }, [transactions]);
 
-  const toggleGroup = (name: string) => {
-    setExpandedGroups(prev => ({ ...prev, [name]: !prev[name] }));
-  };
+  const toggleGroup = (name: string) => { setExpandedGroups(prev => ({ ...prev, [name]: !prev[name] })); };
 
-  // Helper to render a progress bar
   const renderProgressBar = (categoryName: string, amountSpent: number, barColor: string) => {
     const limitObj = budgets.find(b => b.category === categoryName);
     const limit = limitObj ? limitObj.limit_amount : null;
@@ -295,17 +365,15 @@ function InsightsScreen({ user, budgets }: { user: any, budgets: any[] }) {
 
     const percent = Math.min((amountSpent / limit) * 100, 100);
     const isOver = amountSpent > limit;
-    const isWarning = percent >= 80 && !isOver;
+    const isWarning = percent >= 80 && !isOver; 
     
-    let finalColor = barColor;
+    let finalColor = barColor; 
     if (isWarning) finalColor = '#F59E0B'; 
     if (isOver) finalColor = '#EF4444'; 
 
     return (
       <div className="w-full mt-2">
-        <div className="flex justify-end mb-1 text-[10px] text-gray-400 font-medium">
-           {isOver ? "Over Budget" : `${percent.toFixed(0)}% of $${limit}`}
-        </div>
+        <div className="flex justify-end mb-1 text-[10px] text-gray-400 font-medium">{isOver ? "Over Budget" : `${percent.toFixed(0)}% of $${limit}`}</div>
         <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
           <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${percent}%`, backgroundColor: finalColor }}></div>
         </div>
@@ -316,7 +384,7 @@ function InsightsScreen({ user, budgets }: { user: any, budgets: any[] }) {
   if (loading) return <div className="flex-grow flex items-center justify-center pt-20"><Loader2 className="animate-spin text-gray-300" /></div>;
 
   return (
-    <main className="flex flex-col max-w-md mx-auto shadow-2xl relative min-h-[100dvh] pb-32 bg-gray-50">
+    <main className="flex flex-col max-w-md mx-auto shadow-2xl relative min-h-[100dvh] pb-32 bg-gray-50 pt-[env(safe-area-inset-top)]">
       <TopHeader />
       <div className="pt-6 px-6">
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col items-center justify-center mb-6">
@@ -345,11 +413,7 @@ function InsightsScreen({ user, budgets }: { user: any, budgets: any[] }) {
 
                 return (
                   <div key={item.name} className="flex flex-col text-sm border-b border-gray-50 pb-3 last:border-0">
-                    {/* Top Level Row */}
-                    <div 
-                      className={`flex justify-between items-center ${hasSubs ? 'cursor-pointer active:opacity-70' : ''}`}
-                      onClick={() => hasSubs && toggleGroup(item.name)}
-                    >
+                    <div className={`flex justify-between items-center ${hasSubs ? 'cursor-pointer active:opacity-70' : ''}`} onClick={() => hasSubs && toggleGroup(item.name)}>
                       <div className="flex items-center space-x-2">
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }}></div>
                         <span className="font-medium text-gray-700">{item.name}</span>
@@ -357,11 +421,7 @@ function InsightsScreen({ user, budgets }: { user: any, budgets: any[] }) {
                       </div>
                       <span className="font-semibold text-gray-900">${item.value.toFixed(2)}</span>
                     </div>
-
-                    {/* Progress bar for Top Level (if they budgeted the base category) */}
                     {renderProgressBar(item.name, item.value, color)}
-
-                    {/* Drill-down Sub-categories */}
                     {hasSubs && isExpanded && (
                       <div className="mt-3 pl-5 space-y-3 border-l-2 border-gray-100 ml-1.5">
                         {Object.entries(item.subs).map(([subName, subValue]) => (
@@ -370,7 +430,6 @@ function InsightsScreen({ user, budgets }: { user: any, budgets: any[] }) {
                               <span className="text-gray-500">{subName.split(" - ")[1] || subName}</span>
                               <span className="font-medium text-gray-700">${subValue.toFixed(2)}</span>
                             </div>
-                            {/* Progress bar for Specific Sub-category */}
                             {renderProgressBar(subName, subValue, color)}
                           </div>
                         ))}
@@ -388,26 +447,16 @@ function InsightsScreen({ user, budgets }: { user: any, budgets: any[] }) {
 }
 
 // ----------------------------------------------------------------
-// 3. SETTINGS SCREEN (Fixed Input State Bug!)
+// 3. SETTINGS SCREEN
 // ----------------------------------------------------------------
-// Helper component to fix the disappearing input bug
 function BudgetInput({ initialValue, onSave }: { initialValue: string, onSave: (val: string) => void }) {
   const [val, setVal] = useState(initialValue);
-  
-  // If the database changes in the background, update our local input
   useEffect(() => { setVal(initialValue); }, [initialValue]);
 
   return (
     <div className="relative">
       <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-      <input 
-        type="number"
-        placeholder="Limit"
-        value={val}
-        onChange={(e) => setVal(e.target.value)}
-        onBlur={() => onSave(val)}
-        className="w-24 pl-6 pr-2 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-black placeholder:text-gray-300"
-      />
+      <input type="number" placeholder="Limit" value={val} onChange={(e) => setVal(e.target.value)} onBlur={() => onSave(val)} className="w-24 pl-6 pr-2 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-black placeholder:text-gray-300" />
     </div>
   );
 }
@@ -436,21 +485,13 @@ function SettingsScreen({ user, categories, budgets, fetchData }: { user: any, c
   const handleSetBudget = async (categoryName: string, value: string) => {
     if (!value) return; 
     const numValue = parseFloat(value);
-    const { error } = await supabase.from('budgets').upsert({ 
-      user_id: user.id, 
-      category: categoryName, 
-      limit_amount: numValue 
-    }, { onConflict: 'user_id, category' });
-    
-    if (error) {
-      alert("Failed to save budget: " + error.message);
-    } else {
-      fetchData();
-    }
+    const { error } = await supabase.from('budgets').upsert({ user_id: user.id, category: categoryName, limit_amount: numValue }, { onConflict: 'user_id, category' });
+    if (error) alert("Failed to save budget: " + error.message);
+    else fetchData();
   };
 
   return (
-    <main className="flex flex-col max-w-md mx-auto shadow-2xl relative min-h-[100dvh] pb-32 bg-gray-50">
+    <main className="flex flex-col max-w-md mx-auto shadow-2xl relative min-h-[100dvh] pb-32 bg-gray-50 pt-[env(safe-area-inset-top)]">
       <TopHeader />
       <div className="pt-6 px-6">
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-6">
@@ -471,7 +512,6 @@ function SettingsScreen({ user, categories, budgets, fetchData }: { user: any, c
                 <div key={cat.id} className="flex justify-between items-center p-3 hover:bg-gray-50 rounded-xl transition-colors">
                   <span className="text-sm font-medium text-gray-700 w-1/3 truncate">{cat.name}</span>
                   <div className="flex items-center space-x-2">
-                    {/* Fixed React Input Component! */}
                     <BudgetInput initialValue={currentBudget} onSave={(val) => handleSetBudget(cat.name, val)} />
                     <button onClick={() => handleDeleteCategory(cat.id, cat.name)} className="text-gray-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-all"><X size={16} /></button>
                   </div>
@@ -495,7 +535,7 @@ function SettingsScreen({ user, categories, budgets, fetchData }: { user: any, c
 // ----------------------------------------------------------------
 function BottomNav({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (tab: string) => void }) {
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 max-w-md w-full bg-white/90 backdrop-blur-md border-t border-gray-200 pb-8 pt-4 px-6 flex justify-around items-center z-50">
+    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 max-w-md w-full bg-white/90 backdrop-blur-md border-t border-gray-200 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 px-6 flex justify-around items-center z-50">
       <button onClick={() => setActiveTab("add")} className={`flex flex-col items-center space-y-1 transition-colors ${activeTab === "add" ? "text-black" : "text-gray-400"}`}>
         <Home size={24} className={activeTab === "add" ? "stroke-[2.5px]" : ""} />
         <span className="text-[10px] font-semibold">Entry</span>
