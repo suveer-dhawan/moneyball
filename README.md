@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎯 Moneyball
 
-## Getting Started
+Moneyball is a premium, mobile-first personal finance and budgeting application designed for speed, clarity, and actionable insights. Built with a focus on frictionless data entry and dynamic visualization, it allows users to track expenses in under 3 seconds and monitor monthly budget caps in real-time.
 
-First, run the development server:
+## ✨ Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Lightning-Fast Entry:** An oversized, mobile-optimized numpad designed for 1-handed, 3-second transaction logging.
+- **Dynamic Insights Dashboard:** Visual monthly breakdowns utilizing interactive donut charts and smart category grouping.
+- **Proactive Budgeting:** Set custom monthly limits per category. Progress bars dynamically update and warn users visually (Amber at 80%, Red at >100%) as they approach their caps.
+- **Custom Category Engine:** Fully personalized transaction categories with smart drill-down capabilities (e.g., Grouping "Groceries - Coles" and "Groceries - Aldi" under a master "Groceries" view).
+- **Enterprise-Grade Security:** Full user authentication and database protection via PostgreSQL Row Level Security (RLS).
+- **Native iOS Feel:** Designed with Tailwind CSS to mimic native mobile applications, including frosted glass headers, hidden scrollbars, and fluid touch interactions.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🛠 Tech Stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Frontend:**
+- [Next.js](https://nextjs.org/) (App Router)
+- [React](https://reactjs.org/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Recharts](https://recharts.org/) (Data Visualization)
+- [Lucide React](https://lucide.dev/) (Iconography)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Backend & Database:**
+- [Supabase](https://supabase.com/) (PostgreSQL Database)
+- Supabase Authentication
+- Row Level Security (RLS) Policies
 
-## Learn More
+**Deployment:**
+- [Vercel](https://vercel.com)
 
-To learn more about Next.js, take a look at the following resources:
+## 🚀 Getting Started (Local Development)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Prerequisites
+- Node.js 18+ 
+- A free [Supabase](https://supabase.com/) account.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Installation
 
-## Deploy on Vercel
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/yourusername/moneyball.git](https://github.com/yourusername/moneyball.git)
+   cd moneyball
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. **Install dependencies:**
+    ```bash
+    npm install
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. **Set up Environment Variables:**
+Create a `.env.local` file in the root directory and add your Supabase project keys:
+
+    NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+4. **Database Setup:**
+Run the following SQL queries in your Supabase SQL Editor to generate the necessary tables and security policies:
+
+Note: Ensure Row Level Security (RLS) is enabled and policies are set to allow authenticated users to `INSERT`, `SELECT`, `UPDATE`, and `DELETE` their own rows (`auth.uid() = user_id`).
+
+- transactions (id, created_at, amount, category, notes, date, user_id)
+- user_categories (id, created_at, name, user_id)
+- budgets (id, created_at, category, limit_amount, user_id)
+
+5. **Run the development server:**
+    ```bash
+    npm run dev
+
+## 📱 Progressive Web App (PWA) Usage
+Moneyball is heavily optimized for mobile browsers. For the best experience on iOS:
+
+1. Navigate to the deployed Vercel URL in Safari.
+2. Tap the Share icon at the bottom of the screen.
+3. Select Add to Home Screen.
+4. Launch Moneyball directly from your home screen for a fullscreen, native app experience.
+---
+Designed and built for financial clarity.
