@@ -455,8 +455,9 @@ function BudgetInput({ initialValue, onSave }: { initialValue: string, onSave: (
 
   return (
     <div className="relative">
-      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-      <input type="number" placeholder="Limit" value={val} onChange={(e) => setVal(e.target.value)} onBlur={() => onSave(val)} className="w-24 pl-6 pr-2 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-black placeholder:text-gray-300" />
+      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-[16px]">$</span>
+      {/* Changed to text-[16px] to prevent iOS Auto-Zoom */}
+      <input type="number" placeholder="Limit" value={val} onChange={(e) => setVal(e.target.value)} onBlur={() => onSave(val)} className="w-24 pl-6 pr-2 py-1.5 bg-white border border-gray-200 rounded-lg text-[16px] text-gray-900 focus:outline-none focus:ring-1 focus:ring-black placeholder:text-gray-300" />
     </div>
   );
 }
@@ -483,7 +484,13 @@ function SettingsScreen({ user, categories, budgets, fetchData }: { user: any, c
   };
 
   const handleSetBudget = async (categoryName: string, value: string) => {
-    if (!value) return; 
+    // FIX: If the box is cleared, delete the budget limit from the database
+    if (!value || value.trim() === "") {
+      const { error } = await supabase.from('budgets').delete().match({ user_id: user.id, category: categoryName });
+      if (!error) fetchData();
+      return;
+    } 
+    
     const numValue = parseFloat(value);
     const { error } = await supabase.from('budgets').upsert({ user_id: user.id, category: categoryName, limit_amount: numValue }, { onConflict: 'user_id, category' });
     if (error) alert("Failed to save budget: " + error.message);
@@ -498,7 +505,8 @@ function SettingsScreen({ user, categories, budgets, fetchData }: { user: any, c
           <div className="p-6 border-b border-gray-100 bg-gray-50/50">
             <h3 className="font-semibold text-gray-900 mb-4">Manage Categories & Budgets</h3>
             <div className="flex space-x-2">
-              <input type="text" placeholder="New category..." value={newCatName} onChange={(e) => setNewCatName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()} className="flex-grow bg-white border border-gray-200 px-4 py-2 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-black transition-all" />
+              {/* Changed to text-[16px] here as well */}
+              <input type="text" placeholder="New category..." value={newCatName} onChange={(e) => setNewCatName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()} className="flex-grow bg-white border border-gray-200 px-4 py-2 rounded-xl text-[16px] text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-black transition-all" />
               <button onClick={handleAddCategory} disabled={isAdding || !newCatName.trim()} className="bg-black text-white p-2 px-4 rounded-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center">
                 {isAdding ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
               </button>
@@ -510,8 +518,9 @@ function SettingsScreen({ user, categories, budgets, fetchData }: { user: any, c
               const currentBudget = budgets.find(b => b.category === cat.name)?.limit_amount?.toString() || '';
               return (
                 <div key={cat.id} className="flex justify-between items-center p-3 hover:bg-gray-50 rounded-xl transition-colors">
-                  <span className="text-sm font-medium text-gray-700 w-1/3 truncate">{cat.name}</span>
-                  <div className="flex items-center space-x-2">
+                  {/* FIX: Replaced w-1/3 and truncate with flex-1 and leading-tight so long names wrap nicely */}
+                  <span className="text-sm font-medium text-gray-700 flex-1 pr-3 leading-tight break-words">{cat.name}</span>
+                  <div className="flex items-center space-x-2 shrink-0">
                     <BudgetInput initialValue={currentBudget} onSave={(val) => handleSetBudget(cat.name, val)} />
                     <button onClick={() => handleDeleteCategory(cat.id, cat.name)} className="text-gray-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-all"><X size={16} /></button>
                   </div>
