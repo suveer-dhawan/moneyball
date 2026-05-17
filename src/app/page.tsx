@@ -116,8 +116,13 @@ function MoneyballApp({ user }: { user: any }) {
     if (catRes.data && catRes.data.length > 0) setCategories(catRes.data);
     else {
       const seedData = DEFAULT_CATEGORIES.map(name => ({ name, user_id: user.id }));
-      await supabase.from('user_categories').insert(seedData);
-      fetchData(); // Recursively fetch seeded cats
+      const { error: seedError } = await supabase.from('user_categories').insert(seedData);
+      if (seedError) {
+        console.error('Failed to seed default categories:', seedError);
+        setLoadingData(false);
+        return;
+      }
+      fetchData();
       return;
     }
 
