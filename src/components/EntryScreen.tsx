@@ -7,6 +7,10 @@ import TopHeader from "./TopHeader";
 
 const supabase = createClient();
 
+function toLocalDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export default function EntryScreen({
   user,
   categories,
@@ -22,10 +26,26 @@ export default function EntryScreen({
 }) {
   const [amount, setAmount] = useState("0");
   const [category, setCategory] = useState("");
-  const [isToday, setIsToday] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(() => toLocalDateStr(new Date()));
   const [note, setNote] = useState("");
   const [toastMsg, setToastMsg] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const todayStr = toLocalDateStr(new Date());
+  const minDateStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 60);
+    return toLocalDateStr(d);
+  }, []);
+  const yesterdayStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return toLocalDateStr(d);
+  }, []);
+  const chipLabel =
+    selectedDate === todayStr ? "Today" :
+    selectedDate === yesterdayStr ? "Yesterday" :
+    new Date(selectedDate + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
   const recentTx = useMemo(() => transactions.slice(0, 5), [transactions]);
 
@@ -55,8 +75,7 @@ export default function EntryScreen({
       return alert("Please enter an amount and select a category.");
     }
     const numAmount = parseFloat(amount);
-    const txDate = new Date();
-    if (!isToday) txDate.setDate(txDate.getDate() - 1);
+    const txDate = new Date(selectedDate + "T12:00:00");
 
     const { error } = await supabase.from('transactions').insert({
       amount: numAmount, category, notes: note, date: txDate.toISOString(), user_id: user.id,
@@ -65,7 +84,7 @@ export default function EntryScreen({
       if (navigator.vibrate) navigator.vibrate(50);
       setToastMsg(`Saved $${numAmount} for ${category}`);
       setTimeout(() => setToastMsg(""), 2500);
-      setAmount("0"); setCategory(""); setNote(""); setIsToday(true);
+      setAmount("0"); setCategory(""); setNote(""); setSelectedDate(toLocalDateStr(new Date()));
       fetchData();
     } else alert("Error: " + error.message);
   };
@@ -90,9 +109,17 @@ export default function EntryScreen({
       <div className="flex flex-col items-center justify-center px-6 py-6 bg-white rounded-b-3xl shadow-sm z-10 pt-6 -mt-[env(safe-area-inset-top)]">
         <h1 className="text-6xl font-light text-gray-900 tracking-tighter mb-4">${amount}</h1>
         <div className="flex space-x-3 mb-4 w-full justify-center">
-          <button onClick={() => setIsToday(!isToday)} className="flex items-center space-x-1.5 bg-gray-100 px-4 py-2 rounded-full text-sm font-medium text-gray-600 transition-colors">
-            <Calendar size={16} /><span>{isToday ? "Today" : "Yesterday"}</span>
-          </button>
+          <div className="relative flex items-center space-x-1.5 bg-gray-100 px-4 py-2 rounded-full text-sm font-medium text-gray-600">
+            <Calendar size={16} /><span>{chipLabel}</span>
+            <input
+              type="date"
+              value={selectedDate}
+              min={minDateStr}
+              max={todayStr}
+              onChange={(e) => { if (e.target.value) setSelectedDate(e.target.value); }}
+              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+            />
+          </div>
           <div className="flex items-center space-x-1.5 bg-gray-100 px-4 py-2 rounded-full text-sm font-medium text-gray-600 focus-within:ring-2 focus-within:ring-black">
             <PenLine size={16} /><input type="text" placeholder="Note..." value={note} onChange={(e) => setNote(e.target.value)} className="bg-transparent outline-none w-20 focus:w-32 transition-all text-gray-900" />
           </div>
@@ -122,7 +149,7 @@ export default function EntryScreen({
         <div className="space-y-3">
           {recentTx.length === 0 ? <p className="text-gray-400 text-sm italic">No entries.</p> : recentTx.map((tx) => (
             <div key={tx.id} className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-              <div className="flex flex-col"><span className="font-semibold text-gray-900">{tx.category}</span><span className="text-xs text-gray-500">{new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} {tx.notes && `• ${tx.notes}`}</span></div>
+              <div className="flex flex-col"><span className="font-semibold text-gray-900">{tx.category}</span><span className="text-xs text-gray-500">{new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} {tx.notes && `\u2022 ${tx.notes}`}</span></div>
               <div className="flex items-center space-x-4"><span className="font-bold text-gray-900">${tx.amount.toFixed(2)}</span><button onClick={() => handleDeleteTx(tx.id)} className="text-gray-300 hover:text-red-500"><Trash2 size={18} /></button></div>
             </div>
           ))}
