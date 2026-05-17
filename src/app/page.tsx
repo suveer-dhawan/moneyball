@@ -394,7 +394,7 @@ function InsightsScreen({ user, budgets, income, transactions }: { user: any, bu
       <div className="w-full mt-2">
         <div className="flex justify-between mb-1 text-[10px] text-gray-400 font-medium">
           <span>{percent.toFixed(0)}% used</span>
-          <span>$${limit} limit</span>
+          <span>${limit} limit</span>
         </div>
         <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden"><div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${percent}%`, backgroundColor: finalColor }}></div></div>
       </div>
