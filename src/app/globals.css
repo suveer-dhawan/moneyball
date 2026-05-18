@@ -160,10 +160,10 @@
   --destructive-bg:       #fef2f2;
   --destructive-fg:       #dc2626;
 
-  --positive:             #10b981;
-  --positive-tint:        rgba(16, 185, 129, 0.15);
-  --negative:             #f87171;
-  --negative-tint:        rgba(239, 68, 68, 0.12);
+  --positive:             #557a46; 
+  --positive-tint:        rgba(85, 122, 70, 0.15);
+  --negative:             #d9534f; /* Warmed up your red just a touch */
+  --negative-tint:        rgba(217, 83, 79, 0.12);
 
   --brand:                #34d399;
   --delete-icon:          #c4a882;
