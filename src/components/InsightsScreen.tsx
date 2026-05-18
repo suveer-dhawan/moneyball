@@ -83,7 +83,7 @@ export default function InsightsScreen({
 
         <div className="text-center mb-8">
           <span className="text-sm text-fg-secondary">
-            Monthly Income: <span className="text-gray-800 font-semibold">${currentMonthData.totalIncome.toFixed(2)}</span>
+            Monthly Income: <span className="text-fg-base font-semibold">${currentMonthData.totalIncome.toFixed(2)}</span>
           </span>
         </div>
 
