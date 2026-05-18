@@ -35,7 +35,11 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {/* Reads localStorage before first paint to avoid theme flash */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var p=localStorage.getItem('moneyball-theme')||'system';document.documentElement.dataset.theme=p==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):p;}catch(e){}})();` }} />
+        {children}
+      </body>
     </html>
   );
 }

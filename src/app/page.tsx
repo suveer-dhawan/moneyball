@@ -5,12 +5,14 @@ import { Loader2 } from "lucide-react";
 import { createClient } from "../lib/supabase";
 import LoginScreen from "../components/LoginScreen";
 import MoneyballApp from "../components/MoneyballApp";
+import { useTheme } from "../hooks/useTheme";
 
 const supabase = createClient();
 
 export default function MoneyballWrapper() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { preference, setPreference } = useTheme();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -21,7 +23,7 @@ export default function MoneyballWrapper() {
     return () => subscription.unsubscribe();
   }, []);
 
-  if (loading) return <div className="flex min-h-[100dvh] items-center justify-center bg-gray-50"><Loader2 className="animate-spin text-gray-400" size={48} /></div>;
+  if (loading) return <div className="flex min-h-[100dvh] items-center justify-center bg-surface"><Loader2 className="animate-spin text-fg-muted" size={48} /></div>;
   if (!session) return <LoginScreen />;
-  return <MoneyballApp user={session.user} />;
+  return <MoneyballApp user={session.user} themePreference={preference} setThemePreference={setPreference} />;
 }

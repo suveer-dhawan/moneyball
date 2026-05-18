@@ -13,14 +13,14 @@ export default function BudgetInput({
   useEffect(() => { setVal(initialValue); }, [initialValue]);
   return (
     <div className="relative">
-      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-[16px]">$</span>
+      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-muted text-[16px]">$</span>
       <input
         type="number"
         placeholder="Limit"
         value={val}
         onChange={(e) => setVal(e.target.value)}
         onBlur={() => onSave(val)}
-        className="w-24 pl-6 pr-2 py-1.5 bg-white border border-gray-200 rounded-lg text-[16px] text-gray-900 focus:outline-none focus:ring-1 focus:ring-black placeholder:text-gray-300"
+        className="w-24 pl-6 pr-2 py-1.5 bg-surface-card border border-line-default rounded-lg text-[16px] text-fg-base focus:outline-none focus:ring-1 focus:ring-focus-ring placeholder:text-fg-muted"
       />
     </div>
   );

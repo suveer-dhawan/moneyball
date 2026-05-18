@@ -1,27 +1,223 @@
 @import "tailwindcss";
 
+/* Source CSS variables per theme.
+   Two-level design: source vars (--name) are defined per theme here.
+   Tailwind utilities are registered below via @theme inline.
+   Apply a theme by setting data-theme="light|dark|warm" on <html>. */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Light theme -- default and explicit data-theme="light" fallback */
+  --surface:              #f9fafb;
+  --surface-card:         #ffffff;
+  --surface-inset:        #f3f4f6;
+  --surface-feature:      #0f172a;
+  --surface-overlay:      #f9fafb;
+
+  --fg-base:              #111827;
+  --fg-mid:               #374151;
+  --fg-secondary:         #6b7280;
+  --fg-muted:             #9ca3af;
+  --fg-on-feature:        #ffffff;
+  --fg-on-feature-dim:    #94a3b8;
+  --fg-on-action:         #ffffff;
+
+  --nav-header:           rgba(17, 24, 39, 0.95);
+  --nav-bar:              rgba(255, 255, 255, 0.9);
+  --nav-active:           #000000;
+  --nav-inactive:         #9ca3af;
+
+  --line-default:         #e5e7eb;
+  --line-subtle:          #f3f4f6;
+  --line-feature:         #1e293b;
+  --line-nav:             #e5e7eb;
+
+  --action:               #000000;
+  --focus-ring:           #000000;
+
+  --destructive-bg:       #fef2f2;
+  --destructive-fg:       #dc2626;
+
+  --positive:             #10b981;
+  --positive-tint:        rgba(16, 185, 129, 0.2);
+  --negative:             #f87171;
+  --negative-tint:        rgba(239, 68, 68, 0.15);
+
+  --brand:                #34d399;
+  --delete-icon:          #d1d5db;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
+/* System dark mode -- applies before JS hydrates (when no data-theme is set) */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not([data-theme]) {
+    --surface:            #111827;
+    --surface-card:       #1f2937;
+    --surface-inset:      #374151;
+    --surface-feature:    #0f172a;
+    --surface-overlay:    #111827;
+
+    --fg-base:            #f9fafb;
+    --fg-mid:             #d1d5db;
+    --fg-secondary:       #9ca3af;
+    --fg-muted:           #6b7280;
+    --fg-on-feature:      #f9fafb;
+    --fg-on-feature-dim:  #6b7280;
+    --fg-on-action:       #111827;
+
+    --nav-header:         rgba(15, 23, 42, 0.95);
+    --nav-bar:            rgba(31, 41, 55, 0.95);
+    --nav-active:         #ffffff;
+    --nav-inactive:       #6b7280;
+
+    --line-default:       #374151;
+    --line-subtle:        #1f2937;
+    --line-feature:       #1e293b;
+    --line-nav:           #374151;
+
+    --action:             #ffffff;
+    --focus-ring:         #ffffff;
+
+    --destructive-bg:     rgba(220, 38, 38, 0.12);
+    --destructive-fg:     #f87171;
+
+    --positive:           #10b981;
+    --positive-tint:      rgba(16, 185, 129, 0.15);
+    --negative:           #f87171;
+    --negative-tint:      rgba(239, 68, 68, 0.12);
+
+    --brand:              #34d399;
+    --delete-icon:        #4b5563;
   }
 }
 
+[data-theme="dark"] {
+  --surface:              #111827;
+  --surface-card:         #1f2937;
+  --surface-inset:        #374151;
+  --surface-feature:      #0f172a;
+  --surface-overlay:      #111827;
+
+  --fg-base:              #f9fafb;
+  --fg-mid:               #d1d5db;
+  --fg-secondary:         #9ca3af;
+  --fg-muted:             #6b7280;
+  --fg-on-feature:        #f9fafb;
+  --fg-on-feature-dim:    #6b7280;
+  --fg-on-action:         #111827;
+
+  --nav-header:           rgba(15, 23, 42, 0.95);
+  --nav-bar:              rgba(31, 41, 55, 0.95);
+  --nav-active:           #ffffff;
+  --nav-inactive:         #6b7280;
+
+  --line-default:         #374151;
+  --line-subtle:          #1f2937;
+  --line-feature:         #1e293b;
+  --line-nav:             #374151;
+
+  --action:               #ffffff;
+  --focus-ring:           #ffffff;
+
+  --destructive-bg:       rgba(220, 38, 38, 0.12);
+  --destructive-fg:       #f87171;
+
+  --positive:             #10b981;
+  --positive-tint:        rgba(16, 185, 129, 0.15);
+  --negative:             #f87171;
+  --negative-tint:        rgba(239, 68, 68, 0.12);
+
+  --brand:                #34d399;
+  --delete-icon:          #4b5563;
+}
+
+[data-theme="warm"] {
+  --surface:              #f5efe6;
+  --surface-card:         #fdfaf5;
+  --surface-inset:        #ede0d0;
+  --surface-feature:      #3d2b1f;
+  --surface-overlay:      #f5efe6;
+
+  --fg-base:              #2d1b0e;
+  --fg-mid:               #5c3d2e;
+  --fg-secondary:         #8b6b52;
+  --fg-muted:             #b8967a;
+  --fg-on-feature:        #fdf8f2;
+  --fg-on-feature-dim:    #9e7c62;
+  --fg-on-action:         #fdf8f2;
+
+  --nav-header:           rgba(61, 43, 31, 0.95);
+  --nav-bar:              rgba(253, 250, 245, 0.92);
+  --nav-active:           #2d1b0e;
+  --nav-inactive:         #b8967a;
+
+  --line-default:         #d4b896;
+  --line-subtle:          #ede0d0;
+  --line-feature:         #5c3d2e;
+  --line-nav:             #d4b896;
+
+  --action:               #3d2b1f;
+  --focus-ring:           #3d2b1f;
+
+  --destructive-bg:       #fef2f2;
+  --destructive-fg:       #dc2626;
+
+  --positive:             #10b981;
+  --positive-tint:        rgba(16, 185, 129, 0.15);
+  --negative:             #f87171;
+  --negative-tint:        rgba(239, 68, 68, 0.12);
+
+  --brand:                #34d399;
+  --delete-icon:          #c4a882;
+}
+
+/* Tailwind v4 token registration.
+   @theme inline emits utilities as var() references so they respond
+   to data-theme changes at runtime. */
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --color-surface:             var(--surface);
+  --color-surface-card:        var(--surface-card);
+  --color-surface-inset:       var(--surface-inset);
+  --color-surface-feature:     var(--surface-feature);
+  --color-surface-overlay:     var(--surface-overlay);
+
+  --color-fg-base:             var(--fg-base);
+  --color-fg-mid:              var(--fg-mid);
+  --color-fg-secondary:        var(--fg-secondary);
+  --color-fg-muted:            var(--fg-muted);
+  --color-fg-on-feature:       var(--fg-on-feature);
+  --color-fg-on-feature-dim:   var(--fg-on-feature-dim);
+  --color-fg-on-action:        var(--fg-on-action);
+
+  --color-nav-header:          var(--nav-header);
+  --color-nav-bar:             var(--nav-bar);
+  --color-nav-active:          var(--nav-active);
+  --color-nav-inactive:        var(--nav-inactive);
+
+  --color-line-default:        var(--line-default);
+  --color-line-subtle:         var(--line-subtle);
+  --color-line-feature:        var(--line-feature);
+  --color-line-nav:            var(--line-nav);
+
+  --color-action:              var(--action);
+  --color-focus-ring:          var(--focus-ring);
+
+  --color-destructive-bg:      var(--destructive-bg);
+  --color-destructive-fg:      var(--destructive-fg);
+
+  --color-positive:            var(--positive);
+  --color-positive-tint:       var(--positive-tint);
+  --color-negative:            var(--negative);
+  --color-negative-tint:       var(--negative-tint);
+
+  --color-brand:               var(--brand);
+  --color-delete-icon:         var(--delete-icon);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--surface);
+  color: var(--fg-base);
   font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -32,6 +228,6 @@ body {
 
 /* Hide scrollbar for IE, Edge and Firefox */
 .no-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
