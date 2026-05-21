@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Delete, Check, Calendar, PenLine, Loader2, Trash2, ChevronLeft, LayoutGrid } from "lucide-react";
+import { Delete, Check, Calendar, PenLine, Loader2, Trash2, ChevronLeft, LayoutGrid, ChevronRight } from "lucide-react";
 import { createClient } from "../lib/supabase";
 import TopHeader from "./TopHeader";
 import CategoryPicker from "./CategoryPicker";
@@ -35,6 +35,7 @@ export default function EntryScreen({
   const [toastMsg, setToastMsg] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   const todayStr = toLocalDateStr(new Date());
   const minDateStr = useMemo(() => {
@@ -65,6 +66,23 @@ export default function EntryScreen({
     return transactions.filter(tx => new Date(tx.date) >= firstDay);
   }, [transactions]);
 
+  const startEditing = (tx: Transaction) => {
+    setEditingTransaction(tx);
+    setAmount(tx.amount.toString());
+    setCategory(tx.category);
+    setNote(tx.notes ?? "");
+    setSelectedDate(toLocalDateStr(new Date(tx.date)));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleCancel = () => {
+    setEditingTransaction(null);
+    setAmount("0");
+    setCategory("");
+    setNote("");
+    setSelectedDate(toLocalDateStr(new Date()));
+  };
+
   const handlePress = (val: string) => {
     if (amount === "0" && val !== ".") setAmount(val);
     else if (val === "." && amount.includes(".")) return;
@@ -87,21 +105,36 @@ export default function EntryScreen({
     const numAmount = parseFloat(amount);
     const txDate = new Date(selectedDate + "T12:00:00");
 
-    const { error } = await supabase.from('transactions').insert({
-      amount: numAmount, category, notes: note, date: txDate.toISOString(), user_id: user.id,
-    });
-    if (!error) {
-      if (navigator.vibrate) navigator.vibrate(50);
-      setToastMsg(`Saved $${numAmount} for ${category}`);
-      setTimeout(() => setToastMsg(""), 2500);
-      setAmount("0"); setCategory(""); setNote(""); setSelectedDate(toLocalDateStr(new Date()));
-      fetchData();
-    } else alert("Error: " + error.message);
+    if (editingTransaction) {
+      const { error } = await supabase.from('transactions').update({
+        amount: numAmount, category, notes: note, date: txDate.toISOString(),
+      }).eq('id', editingTransaction.id);
+      if (!error) {
+        if (navigator.vibrate) navigator.vibrate(50);
+        setToastMsg(`Updated $${numAmount} for ${category}`);
+        setTimeout(() => setToastMsg(""), 2500);
+        setEditingTransaction(null);
+        setAmount("0"); setCategory(""); setNote(""); setSelectedDate(toLocalDateStr(new Date()));
+        fetchData();
+      } else alert("Error: " + error.message);
+    } else {
+      const { error } = await supabase.from('transactions').insert({
+        amount: numAmount, category, notes: note, date: txDate.toISOString(), user_id: user.id,
+      });
+      if (!error) {
+        if (navigator.vibrate) navigator.vibrate(50);
+        setToastMsg(`Saved $${numAmount} for ${category}`);
+        setTimeout(() => setToastMsg(""), 2500);
+        setAmount("0"); setCategory(""); setNote(""); setSelectedDate(toLocalDateStr(new Date()));
+        fetchData();
+      } else alert("Error: " + error.message);
+    }
   };
 
   const handleDeleteTx = async (id: string) => {
     if (window.confirm("Delete this transaction?")) {
       await supabase.from('transactions').delete().eq('id', id);
+      if (editingTransaction?.id === id) handleCancel();
       fetchData();
     }
   };
@@ -116,6 +149,15 @@ export default function EntryScreen({
         </div>
       )}
       <TopHeader />
+
+      {editingTransaction && (
+        <div className="mx-4 mt-2 mb-1 px-4 py-2.5 bg-surface-inset border border-line-default rounded-xl flex items-center gap-2 text-sm text-fg-secondary z-20">
+          <PenLine size={14} className="shrink-0" />
+          <span>Editing</span>
+          <span className="font-semibold text-fg-base truncate">{editingTransaction.category}</span>
+        </div>
+      )}
+
       <div className="flex flex-col items-center justify-center px-6 py-6 bg-surface-card rounded-b-3xl shadow-sm z-10 pt-6 -mt-[env(safe-area-inset-top)]">
         <h1 className="text-6xl font-light text-fg-base tracking-tighter mb-4">${amount}</h1>
         <div className="flex space-x-3 mb-4 w-full justify-center">
@@ -191,16 +233,39 @@ export default function EntryScreen({
         <button onClick={() => handlePress("0")} className="flex items-center justify-center bg-surface-card text-3xl font-normal text-fg-base rounded-2xl shadow-sm h-[64px] active:bg-gray-200 transition-colors">0</button>
         <button onClick={handleDelete} className="flex items-center justify-center bg-surface-inset text-fg-secondary rounded-2xl shadow-sm h-[64px] active:bg-gray-300 transition-colors"><Delete size={24} /></button>
       </div>
+
       <div className="px-6 pb-6">
-        <button onClick={handleSave} className="w-full bg-action text-fg-on-action py-4 rounded-2xl text-lg font-bold shadow-lg active:scale-[0.98]">Save Entry</button>
+        {editingTransaction ? (
+          <div className="flex gap-3">
+            <button onClick={handleCancel} className="flex-1 bg-surface-inset text-fg-secondary py-4 rounded-2xl text-lg font-bold shadow-sm active:scale-[0.98] border border-line-default">Cancel</button>
+            <button onClick={handleSave} className="flex-[2] bg-action text-fg-on-action py-4 rounded-2xl text-lg font-bold shadow-lg active:scale-[0.98]">Update Entry</button>
+          </div>
+        ) : (
+          <button onClick={handleSave} className="w-full bg-action text-fg-on-action py-4 rounded-2xl text-lg font-bold shadow-lg active:scale-[0.98]">Save Entry</button>
+        )}
       </div>
+
       <div className="px-6">
         <h3 className="text-sm font-semibold text-fg-muted mb-3 uppercase tracking-wider">Recent Activity</h3>
         <div className="space-y-3">
           {recentTx.length === 0 ? <p className="text-fg-muted text-sm italic">No entries.</p> : recentTx.map((tx) => (
-            <div key={tx.id} className="flex justify-between items-center bg-surface-card p-4 rounded-2xl shadow-sm border border-line-subtle">
-              <div className="flex flex-col"><span className="font-semibold text-fg-base">{tx.category}</span><span className="text-xs text-fg-secondary">{new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} {tx.notes && `\u2022 ${tx.notes}`}</span></div>
-              <div className="flex items-center space-x-4"><span className="font-bold text-fg-base">${tx.amount.toFixed(2)}</span><button onClick={() => handleDeleteTx(tx.id)} className="text-delete-icon hover:text-red-500"><Trash2 size={18} /></button></div>
+            <div key={tx.id} className="flex items-stretch bg-surface-card rounded-2xl shadow-sm border border-line-subtle overflow-hidden">
+              <button
+                onClick={() => startEditing(tx)}
+                className="flex flex-1 justify-between items-center p-4 active:bg-surface-inset text-left"
+              >
+                <div className="flex flex-col">
+                  <span className="font-semibold text-fg-base">{tx.category}</span>
+                  <span className="text-xs text-fg-secondary">{new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}{tx.notes && ` • ${tx.notes}`}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-fg-base">${tx.amount.toFixed(2)}</span>
+                  <ChevronRight size={14} className="text-fg-muted" />
+                </div>
+              </button>
+              <button onClick={() => handleDeleteTx(tx.id)} className="px-4 text-delete-icon hover:text-red-500 border-l border-line-subtle">
+                <Trash2 size={18} />
+              </button>
             </div>
           ))}
           {recentTx.length > 0 && <button onClick={() => setIsModalOpen(true)} className="w-full text-center py-3 text-sm font-semibold text-fg-muted hover:text-fg-base">View all month activity</button>}
@@ -226,9 +291,23 @@ export default function EntryScreen({
           </header>
           <div className="flex-1 overflow-y-auto p-6 space-y-3 pb-32">
             {allMonthTx.map((tx) => (
-              <div key={tx.id} className="flex justify-between items-center bg-surface-card p-4 rounded-2xl shadow-sm border border-line-subtle">
-                <div className="flex flex-col"><span className="font-semibold text-fg-base">{tx.category}</span><span className="text-xs text-fg-secondary">{new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span></div>
-                <div className="flex items-center space-x-4"><span className="font-bold text-fg-base">${tx.amount.toFixed(2)}</span><button onClick={() => handleDeleteTx(tx.id)} className="text-delete-icon hover:text-red-500"><Trash2 size={18} /></button></div>
+              <div key={tx.id} className="flex items-stretch bg-surface-card rounded-2xl shadow-sm border border-line-subtle overflow-hidden">
+                <button
+                  onClick={() => { setIsModalOpen(false); startEditing(tx); }}
+                  className="flex flex-1 justify-between items-center p-4 active:bg-surface-inset text-left"
+                >
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-fg-base">{tx.category}</span>
+                    <span className="text-xs text-fg-secondary">{new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}{tx.notes && ` • ${tx.notes}`}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-fg-base">${tx.amount.toFixed(2)}</span>
+                    <ChevronRight size={14} className="text-fg-muted" />
+                  </div>
+                </button>
+                <button onClick={() => handleDeleteTx(tx.id)} className="px-4 text-delete-icon hover:text-red-500 border-l border-line-subtle">
+                  <Trash2 size={18} />
+                </button>
               </div>
             ))}
           </div>
