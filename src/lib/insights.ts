@@ -1,9 +1,12 @@
-import type { Transaction, Income } from "@/lib/types";
+import type { Transaction, Income, Budget } from "@/lib/types";
 
 export interface ChartItem {
   name: string;
   value: number;
   subs: Record<string, number>;
+  budgetLimit: number | null;
+  budgetPercent: number | null;
+  budgetStatus: 'healthy' | 'warning' | 'over' | 'none';
 }
 
 export interface MonthData {
@@ -11,6 +14,14 @@ export interface MonthData {
   totalIncome: number;
   netSavings: number;
   chartData: ChartItem[];
+  paceData: {
+    actual: { day: number; cumulative: number }[];
+    budgetTotal: number;
+    daysInMonth: number;
+    currentDay: number;
+    savingsRate: number;
+    onTrack: boolean;
+  };
 }
 
 export interface HistoricalEntry {
@@ -22,10 +33,13 @@ export interface HistoricalEntry {
 export function computeMonthData(
   selectedDate: Date,
   transactions: Transaction[],
-  income: Income[]
+  income: Income[],
+  budgets: Budget[]
 ): MonthData {
-  const start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
-  const end = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0, 23, 59, 59);
+  const year = selectedDate.getFullYear();
+  const month = selectedDate.getMonth();
+  const start = new Date(year, month, 1);
+  const end = new Date(year, month + 1, 0, 23, 59, 59);
 
   const monthTx = transactions.filter(tx => {
     const d = new Date(tx.date);
@@ -53,10 +67,57 @@ export function computeMonthData(
   const netSavings = totalIncome - totalSpent;
 
   const chartData = Object.keys(grouped)
-    .map(key => ({ name: key, value: grouped[key].total, subs: grouped[key].subs }))
+    .map(key => {
+      const value = grouped[key].total;
+      const budgetEntry = budgets.find(b => b.category === key);
+      const budgetLimit = budgetEntry ? budgetEntry.limit_amount : null;
+      const budgetPercent = budgetLimit !== null ? (value / budgetLimit) * 100 : null;
+      let budgetStatus: ChartItem['budgetStatus'] = 'none';
+      if (budgetPercent !== null) {
+        if (budgetPercent > 100) budgetStatus = 'over';
+        else if (budgetPercent >= 80) budgetStatus = 'warning';
+        else budgetStatus = 'healthy';
+      }
+      return { name: key, value, subs: grouped[key].subs, budgetLimit, budgetPercent, budgetStatus };
+    })
     .sort((a, b) => b.value - a.value);
 
-  return { totalSpent, totalIncome, netSavings, chartData };
+  // Pace data
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+  const isFutureMonth = new Date(year, month, 1) > new Date(today.getFullYear(), today.getMonth(), 1);
+  const currentDay = isFutureMonth ? 0 : isCurrentMonth ? today.getDate() : daysInMonth;
+
+  const actual: { day: number; cumulative: number }[] = [];
+  let cumulative = 0;
+  for (let day = 1; day <= currentDay; day++) {
+    const daySpend = monthTx
+      .filter(tx => new Date(tx.date).getDate() === day)
+      .reduce((s, tx) => s + tx.amount, 0);
+    cumulative += daySpend;
+    actual.push({ day, cumulative });
+  }
+
+  const savingsRate = totalIncome > 0 ? ((totalIncome - totalSpent) / totalIncome) * 100 : 0;
+  const actualAtCurrentDay = actual.length > 0 ? actual[actual.length - 1].cumulative : 0;
+  const expectedPace = daysInMonth > 0 ? (totalIncome / daysInMonth) * currentDay : 0;
+  const onTrack = actualAtCurrentDay < expectedPace;
+
+  return {
+    totalSpent,
+    totalIncome,
+    netSavings,
+    chartData,
+    paceData: {
+      actual,
+      budgetTotal: totalIncome,
+      daysInMonth,
+      currentDay,
+      savingsRate,
+      onTrack,
+    },
+  };
 }
 
 export function computeHistoricalData(transactions: Transaction[], income: Income[]): HistoricalEntry[] {
