@@ -3,14 +3,15 @@
 import { useState } from "react";
 import { createClient } from "../lib/supabase";
 import { DEFAULT_CATEGORIES } from "../lib/constants";
+import type { Transaction, Category, Budget, Income } from "@/lib/types";
 
 const supabase = createClient();
 
 export function useAppData(userId: string) {
-  const [categories, setCategories] = useState<any[]>([]);
-  const [budgets, setBudgets] = useState<any[]>([]);
-  const [income, setIncome] = useState<any[]>([]);
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [income, setIncome] = useState<Income[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
   const fetchData = async () => {

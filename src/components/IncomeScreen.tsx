@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2, Trash2 } from "lucide-react";
 import { createClient } from "../lib/supabase";
 import TopHeader from "./TopHeader";
+import type { AppUser, Income } from "@/lib/types";
 
 const supabase = createClient();
 
@@ -12,8 +13,8 @@ export default function IncomeScreen({
   income,
   fetchData,
 }: {
-  user: any;
-  income: any[];
+  user: AppUser;
+  income: Income[];
   fetchData: () => void;
 }) {
   const [amount, setAmount] = useState("");

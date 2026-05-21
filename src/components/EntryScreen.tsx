@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Delete, Check, Calendar, PenLine, Loader2, Trash2, ChevronLeft } from "lucide-react";
+import { Delete, Check, Calendar, PenLine, Loader2, Trash2, ChevronLeft, LayoutGrid } from "lucide-react";
 import { createClient } from "../lib/supabase";
 import TopHeader from "./TopHeader";
+import CategoryPicker from "./CategoryPicker";
+import type { AppUser, Category, Transaction } from "@/lib/types";
 
 const supabase = createClient();
 
@@ -17,12 +19,14 @@ export default function EntryScreen({
   loadingCats,
   transactions,
   fetchData,
+  pinnedNames,
 }: {
-  user: any;
-  categories: any[];
+  user: AppUser;
+  categories: Category[];
   loadingCats: boolean;
-  transactions: any[];
+  transactions: Transaction[];
   fetchData: () => void;
+  pinnedNames: string[];
 }) {
   const [amount, setAmount] = useState("0");
   const [category, setCategory] = useState("");
@@ -30,6 +34,7 @@ export default function EntryScreen({
   const [note, setNote] = useState("");
   const [toastMsg, setToastMsg] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   const todayStr = toLocalDateStr(new Date());
   const minDateStr = useMemo(() => {
@@ -46,6 +51,11 @@ export default function EntryScreen({
     selectedDate === todayStr ? "Today" :
     selectedDate === yesterdayStr ? "Yesterday" :
     new Date(selectedDate + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
+  const pinnedCategories = useMemo(
+    () => pinnedNames.map((name) => categories.find((c) => c.name === name)).filter(Boolean) as Category[],
+    [pinnedNames, categories]
+  );
 
   const recentTx = useMemo(() => transactions.slice(0, 5), [transactions]);
 
@@ -126,13 +136,53 @@ export default function EntryScreen({
         </div>
         <p className="text-fg-muted font-medium text-sm h-5">{category ? <span className="text-fg-base bg-surface-inset px-3 py-1 rounded-md">{category}</span> : "Select category"}</p>
       </div>
-      <div className="flex overflow-x-auto py-4 px-4 space-x-2 no-scrollbar min-h-[76px] items-center">
-        {loadingCats ? <Loader2 className="animate-spin mx-auto text-fg-muted" /> :
-          categories.map((cat) => (
-            <button key={cat.id} onClick={() => setCategory(cat.name)} className={`whitespace-nowrap px-4 py-2 rounded-2xl text-sm font-semibold ${category === cat.name ? "bg-action text-fg-on-action shadow-md scale-105" : "bg-surface-card text-fg-secondary border active:bg-surface-inset"}`}>{cat.name}</button>
-          ))
-        }
+
+      {/* Pinned category row */}
+      <div className="flex items-center gap-2 py-3 px-4 min-h-[60px]">
+        {loadingCats ? (
+          <Loader2 className="animate-spin text-fg-muted mx-auto" />
+        ) : pinnedCategories.length === 0 ? (
+          <>
+            <span className="text-xs text-fg-muted flex-1 leading-tight">Pin categories in Settings for quick access</span>
+            <button
+              onClick={() => setIsPickerOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-sm font-semibold bg-surface-card text-fg-secondary border border-line-default shrink-0 active:bg-surface-inset"
+            >
+              <LayoutGrid size={15} />
+              <span>All</span>
+            </button>
+          </>
+        ) : (
+          <>
+            {pinnedCategories.map((cat) => {
+              const label = cat.name.includes(" - ")
+                ? cat.name.split(" - ").slice(1).join(" - ")
+                : cat.name;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setCategory(cat.name)}
+                  className={`whitespace-nowrap px-3 py-2 rounded-2xl text-sm font-semibold transition-all active:scale-[0.97] ${
+                    category === cat.name
+                      ? "bg-action text-fg-on-action shadow-md"
+                      : "bg-surface-card text-fg-secondary border border-line-default active:bg-surface-inset"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setIsPickerOpen(true)}
+              className="flex items-center justify-center p-2.5 rounded-2xl bg-surface-inset text-fg-secondary shrink-0 ml-auto active:bg-surface-card"
+              aria-label="All categories"
+            >
+              <LayoutGrid size={16} />
+            </button>
+          </>
+        )}
       </div>
+
       <div className="grid grid-cols-3 gap-2 px-6 pb-4">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
           <button key={num} onClick={() => handlePress(num.toString())} className="flex items-center justify-center bg-surface-card text-3xl font-normal text-fg-base rounded-2xl shadow-sm h-[64px] active:bg-gray-200 transition-colors">{num}</button>
@@ -156,6 +206,17 @@ export default function EntryScreen({
           {recentTx.length > 0 && <button onClick={() => setIsModalOpen(true)} className="w-full text-center py-3 text-sm font-semibold text-fg-muted hover:text-fg-base">View all month activity</button>}
         </div>
       </div>
+
+      {/* Category picker bottom sheet */}
+      {isPickerOpen && (
+        <CategoryPicker
+          categories={categories}
+          onSelect={setCategory}
+          onClose={() => setIsPickerOpen(false)}
+        />
+      )}
+
+      {/* This Month modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] bg-surface-overlay flex flex-col pt-[env(safe-area-inset-top)] animate-in slide-in-from-bottom-full duration-300">
           <header className="flex justify-between items-center px-6 py-4 bg-surface-card border-b shadow-sm">

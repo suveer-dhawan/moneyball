@@ -1,3 +1,5 @@
+import type { Transaction, Income } from "@/lib/types";
+
 export interface ChartItem {
   name: string;
   value: number;
@@ -19,8 +21,8 @@ export interface HistoricalEntry {
 
 export function computeMonthData(
   selectedDate: Date,
-  transactions: any[],
-  income: any[]
+  transactions: Transaction[],
+  income: Income[]
 ): MonthData {
   const start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
   const end = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0, 23, 59, 59);
@@ -57,7 +59,7 @@ export function computeMonthData(
   return { totalSpent, totalIncome, netSavings, chartData };
 }
 
-export function computeHistoricalData(transactions: any[], income: any[]): HistoricalEntry[] {
+export function computeHistoricalData(transactions: Transaction[], income: Income[]): HistoricalEntry[] {
   const data: HistoricalEntry[] = [];
   for (let i = 5; i >= 0; i--) {
     const d = new Date();

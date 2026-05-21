@@ -6,16 +6,17 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis
 import TopHeader from "./TopHeader";
 import { computeMonthData, computeHistoricalData } from "../lib/insights";
 import { CHART_COLORS } from "../lib/constants";
+import type { AppUser, Budget, Income, Transaction } from "@/lib/types";
 
 export default function InsightsScreen({
   budgets,
   income,
   transactions,
 }: {
-  user: any;
-  budgets: any[];
-  income: any[];
-  transactions: any[];
+  user: AppUser;
+  budgets: Budget[];
+  income: Income[];
+  transactions: Transaction[];
 }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isTrendsOpen, setIsTrendsOpen] = useState(false);
