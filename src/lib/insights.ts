@@ -70,7 +70,16 @@ export function computeMonthData(
     .map(key => {
       const value = grouped[key].total;
       const budgetEntry = budgets.find(b => b.category === key);
-      const budgetLimit = budgetEntry ? budgetEntry.limit_amount : null;
+      let budgetLimit = budgetEntry ? budgetEntry.limit_amount : null;
+      if (budgetLimit === null) {
+        // No budget set directly on the group name itself (e.g. "Groceries") -
+        // fall back to summing budgets set on its sub-categories
+        // (e.g. "Groceries - Aldi", "Groceries - Coles").
+        const subBudgets = budgets.filter(b => b.category.startsWith(`${key} - `));
+        if (subBudgets.length > 0) {
+          budgetLimit = subBudgets.reduce((sum, b) => sum + b.limit_amount, 0);
+        }
+      }
       const budgetPercent = budgetLimit !== null ? (value / budgetLimit) * 100 : null;
       let budgetStatus: ChartItem['budgetStatus'] = 'none';
       if (budgetPercent !== null) {
