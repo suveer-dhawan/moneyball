@@ -1,4 +1,5 @@
 import type { Transaction, Income, Budget } from "@/lib/types";
+import { getCategoryGroup, isSubCategoryOf } from "@/lib/categoryGroups";
 
 export interface ChartItem {
   name: string;
@@ -55,9 +56,7 @@ export function computeMonthData(
   const grouped: Record<string, { total: number; subs: Record<string, number> }> = {};
   monthTx.forEach(tx => {
     totalSpent += tx.amount;
-    const groupName = tx.category.includes(" - ")
-      ? tx.category.split(" - ")[0].trim()
-      : tx.category;
+    const groupName = getCategoryGroup(tx.category);
     if (!grouped[groupName]) grouped[groupName] = { total: 0, subs: {} };
     grouped[groupName].total += tx.amount;
     grouped[groupName].subs[tx.category] = (grouped[groupName].subs[tx.category] || 0) + tx.amount;
@@ -75,7 +74,7 @@ export function computeMonthData(
         // No budget set directly on the group name itself (e.g. "Groceries") -
         // fall back to summing budgets set on its sub-categories
         // (e.g. "Groceries - Aldi", "Groceries - Coles").
-        const subBudgets = budgets.filter(b => b.category.startsWith(`${key} - `));
+        const subBudgets = budgets.filter(b => isSubCategoryOf(b.category, key));
         if (subBudgets.length > 0) {
           budgetLimit = subBudgets.reduce((sum, b) => sum + b.limit_amount, 0);
         }

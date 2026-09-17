@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { X, Search } from "lucide-react";
+import { hasCategoryGroup, getCategoryGroup, getCategorySubLabel } from "@/lib/categoryGroups";
 import type { Category } from "@/lib/types";
 
 interface CategoryPickerProps {
@@ -22,7 +23,7 @@ export default function CategoryPicker({ categories, onSelect, onClose }: Catego
 
     const groups: Record<string, Category[]> = {};
     for (const cat of categories) {
-      const key = cat.name.includes(" - ") ? cat.name.split(" - ")[0].trim() : "Other";
+      const key = hasCategoryGroup(cat.name) ? getCategoryGroup(cat.name) : "Other";
       if (!groups[key]) groups[key] = [];
       groups[key].push(cat);
     }
@@ -88,9 +89,7 @@ export default function CategoryPicker({ categories, onSelect, onClose }: Catego
               <div className="space-y-1">
                 {items.map((cat) => {
                   const label =
-                    !isFlat && header !== "Other" && cat.name.includes(" - ")
-                      ? cat.name.split(" - ").slice(1).join(" - ")
-                      : cat.name;
+                    !isFlat && header !== "Other" ? getCategorySubLabel(cat.name) : cat.name;
                   return (
                     <button
                       key={cat.id}

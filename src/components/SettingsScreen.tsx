@@ -5,6 +5,9 @@ import { Loader2, Plus, X, Monitor, Sun, Moon, Leaf } from "lucide-react";
 import { createClient } from "../lib/supabase";
 import TopHeader from "./TopHeader";
 import BudgetInput from "./BudgetInput";
+import Toast from "./Toast";
+import ConfirmDialog from "./ConfirmDialog";
+import { useToast } from "../hooks/useToast";
 import { type ThemePreference } from "../hooks/useTheme";
 import type { AppUser, Category, Budget } from "@/lib/types";
 
@@ -42,28 +45,40 @@ export default function SettingsScreen({
 }) {
   const [newCatName, setNewCatName] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+  const { message: toastMsg, variant: toastVariant, showToast } = useToast();
 
   const handleLogout = async () => await supabase.auth.signOut();
 
   const handleAddCategory = async () => {
-    if (!newCatName.trim()) return;
+    const name = newCatName.trim();
+    if (!name) return;
     setIsAdding(true);
-    const { error } = await supabase.from('user_categories').insert({ name: newCatName.trim(), user_id: user.id });
-    if (!error) { setNewCatName(""); fetchData(); }
+    const { error } = await supabase.from('user_categories').insert({ name, user_id: user.id });
+    if (!error) {
+      setNewCatName("");
+      fetchData();
+    } else if (error.code === '23505') {
+      showToast(`"${name}" already exists.`, "error");
+    } else {
+      showToast(error.message, "error");
+    }
     setIsAdding(false);
   };
 
-  const handleDeleteCategory = async (id: string, name: string) => {
-    if (window.confirm(`Delete "${name}"?`)) {
-      await supabase.from('user_categories').delete().eq('id', id);
-      fetchData();
-    }
+  const confirmDeleteCategory = async () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id;
+    setDeleteTarget(null);
+    await supabase.from('user_categories').delete().eq('id', id);
+    fetchData();
   };
 
   const handleSetBudget = async (categoryName: string, value: string) => {
     if (!value || value.trim() === "") {
       const { error } = await supabase.from('budgets').delete().match({ user_id: user.id, category: categoryName });
       if (!error) fetchData();
+      else showToast(error.message, "error");
       return;
     }
     const { error } = await supabase.from('budgets').upsert(
@@ -71,12 +86,14 @@ export default function SettingsScreen({
       { onConflict: 'user_id, category' }
     );
     if (!error) fetchData();
+    else showToast(error.message, "error");
   };
 
   const atLimit = pinnedNames.length >= MAX_PINS;
 
   return (
     <main className="flex flex-col max-w-md mx-auto shadow-2xl relative min-h-[100dvh] pb-32 bg-surface pt-[env(safe-area-inset-top)]">
+      <Toast message={toastMsg} variant={toastVariant} />
       <TopHeader />
       <div className="pt-6 px-6 space-y-4">
 
@@ -157,7 +174,7 @@ export default function SettingsScreen({
                   <span className="text-sm font-medium text-fg-mid flex-1 pr-3 leading-tight break-words">{cat.name}</span>
                   <div className="flex items-center space-x-2 shrink-0">
                     <BudgetInput initialValue={currentBudget} onSave={(val) => handleSetBudget(cat.name, val)} />
-                    <button onClick={() => handleDeleteCategory(cat.id, cat.name)} className="text-delete-icon hover:text-red-500 p-2"><X size={16} /></button>
+                    <button onClick={() => setDeleteTarget(cat)} className="text-delete-icon hover:text-red-500 p-2"><X size={16} /></button>
                   </div>
                 </div>
               );
@@ -172,6 +189,14 @@ export default function SettingsScreen({
         </div>
 
       </div>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title={deleteTarget ? `Delete "${deleteTarget.name}"?` : ""}
+        message="Past transactions in this category are kept - they just won't show up as a category to pick anymore."
+        onConfirm={confirmDeleteCategory}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </main>
   );
 }

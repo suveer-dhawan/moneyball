@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { Loader2, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Calendar, Loader2, Trash2 } from "lucide-react";
 import { createClient } from "../lib/supabase";
 import TopHeader from "./TopHeader";
+import Toast from "./Toast";
+import ConfirmDialog from "./ConfirmDialog";
+import { useToast } from "../hooks/useToast";
 import type { AppUser, Income } from "@/lib/types";
 
 const supabase = createClient();
+
+function toLocalDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 export default function IncomeScreen({
   user,
@@ -19,34 +26,76 @@ export default function IncomeScreen({
 }) {
   const [amount, setAmount] = useState("");
   const [source, setSource] = useState("");
+  const [selectedDate, setSelectedDate] = useState(() => toLocalDateStr(new Date()));
   const [isAdding, setIsAdding] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Income | null>(null);
+  const { message: toastMsg, variant: toastVariant, showToast } = useToast();
+
+  const todayStr = toLocalDateStr(new Date());
+  const minDateStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 60);
+    return toLocalDateStr(d);
+  }, []);
+  const yesterdayStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return toLocalDateStr(d);
+  }, []);
+  const chipLabel =
+    selectedDate === todayStr ? "Today" :
+    selectedDate === yesterdayStr ? "Yesterday" :
+    new Date(selectedDate + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
   const handleSaveIncome = async () => {
-    if (!amount || !source) return alert("Enter amount and source.");
+    if (!amount || !source) {
+      showToast("Enter amount and source.", "error");
+      return;
+    }
     setIsAdding(true);
+    const incDate = new Date(selectedDate + "T12:00:00");
     const { error } = await supabase.from('income').insert({
-      amount: parseFloat(amount), source, date: new Date().toISOString(), user_id: user.id,
+      amount: parseFloat(amount), source, date: incDate.toISOString(), user_id: user.id,
     });
     if (!error) {
       if (navigator.vibrate) navigator.vibrate(50);
-      setAmount(""); setSource(""); fetchData();
-    } else alert("Error: " + error.message);
+      showToast(`Logged $${amount} from ${source}`);
+      setAmount(""); setSource(""); setSelectedDate(toLocalDateStr(new Date()));
+      fetchData();
+    } else {
+      showToast(error.message, "error");
+    }
     setIsAdding(false);
   };
 
-  const handleDeleteIncome = async (id: string) => {
-    if (window.confirm("Delete entry?")) {
-      await supabase.from('income').delete().eq('id', id);
-      fetchData();
-    }
+  const confirmDeleteIncome = async () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id;
+    setDeleteTarget(null);
+    await supabase.from('income').delete().eq('id', id);
+    fetchData();
   };
 
   return (
     <main className="flex flex-col max-w-md mx-auto shadow-2xl relative min-h-[100dvh] pb-32 bg-surface pt-[env(safe-area-inset-top)]">
+      <Toast message={toastMsg} variant={toastVariant} />
       <TopHeader />
       <div className="pt-6 px-6">
         <div className="bg-surface-card p-6 rounded-3xl shadow-sm border border-line-subtle mb-6">
-          <h2 className="text-xl font-bold text-fg-base mb-4">Log Paycheck</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-fg-base">Log Paycheck</h2>
+            <div className="relative flex items-center space-x-1.5 bg-surface-inset px-3 py-1.5 rounded-full text-xs font-medium text-fg-secondary">
+              <Calendar size={14} /><span>{chipLabel}</span>
+              <input
+                type="date"
+                value={selectedDate}
+                min={minDateStr}
+                max={todayStr}
+                onChange={(e) => { if (e.target.value) setSelectedDate(e.target.value); }}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              />
+            </div>
+          </div>
           <div className="space-y-4">
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-fg-muted font-medium">$</span>
@@ -63,11 +112,19 @@ export default function IncomeScreen({
           {income.map((inc) => (
             <div key={inc.id} className="flex justify-between items-center bg-surface-card p-4 rounded-2xl shadow-sm border border-line-subtle">
               <div className="flex flex-col"><span className="font-semibold text-fg-base">{inc.source}</span><span className="text-xs text-fg-secondary">{new Date(inc.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span></div>
-              <div className="flex items-center space-x-4"><span className="font-bold text-positive">+${inc.amount.toFixed(2)}</span><button onClick={() => handleDeleteIncome(inc.id)} className="text-delete-icon hover:text-red-500"><Trash2 size={18} /></button></div>
+              <div className="flex items-center space-x-4"><span className="font-bold text-positive">+${inc.amount.toFixed(2)}</span><button onClick={() => setDeleteTarget(inc)} className="text-delete-icon hover:text-red-500"><Trash2 size={18} /></button></div>
             </div>
           ))}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete this income entry?"
+        message={deleteTarget ? `${deleteTarget.source} - $${deleteTarget.amount.toFixed(2)}` : undefined}
+        onConfirm={confirmDeleteIncome}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </main>
   );
 }

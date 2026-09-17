@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Delete, Check, Calendar, PenLine, Loader2, Trash2, ChevronLeft, LayoutGrid, ChevronRight } from "lucide-react";
+import { Delete, Calendar, PenLine, Loader2, Trash2, ChevronLeft, LayoutGrid, ChevronRight } from "lucide-react";
 import { createClient } from "../lib/supabase";
 import TopHeader from "./TopHeader";
 import CategoryPicker from "./CategoryPicker";
+import Toast from "./Toast";
+import ConfirmDialog from "./ConfirmDialog";
+import { useToast } from "../hooks/useToast";
+import { getCategorySubLabel } from "@/lib/categoryGroups";
 import type { AppUser, Category, Transaction } from "@/lib/types";
 
 const supabase = createClient();
@@ -32,10 +36,11 @@ export default function EntryScreen({
   const [category, setCategory] = useState("");
   const [selectedDate, setSelectedDate] = useState(() => toLocalDateStr(new Date()));
   const [note, setNote] = useState("");
-  const [toastMsg, setToastMsg] = useState("");
+  const { message: toastMsg, variant: toastVariant, showToast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
 
   const todayStr = toLocalDateStr(new Date());
   const minDateStr = useMemo(() => {
@@ -100,7 +105,8 @@ export default function EntryScreen({
   const handleSave = async () => {
     if (amount === "0" || !category) {
       if (navigator.vibrate) navigator.vibrate([20, 50, 20]);
-      return alert("Please enter an amount and select a category.");
+      showToast("Enter an amount and select a category.", "error");
+      return;
     }
     const numAmount = parseFloat(amount);
     const txDate = new Date(selectedDate + "T12:00:00");
@@ -111,43 +117,36 @@ export default function EntryScreen({
       }).eq('id', editingTransaction.id);
       if (!error) {
         if (navigator.vibrate) navigator.vibrate(50);
-        setToastMsg(`Updated $${numAmount} for ${category}`);
-        setTimeout(() => setToastMsg(""), 2500);
+        showToast(`Updated $${numAmount} for ${category}`);
         setEditingTransaction(null);
         setAmount("0"); setCategory(""); setNote(""); setSelectedDate(toLocalDateStr(new Date()));
         fetchData();
-      } else alert("Error: " + error.message);
+      } else showToast(error.message, "error");
     } else {
       const { error } = await supabase.from('transactions').insert({
         amount: numAmount, category, notes: note, date: txDate.toISOString(), user_id: user.id,
       });
       if (!error) {
         if (navigator.vibrate) navigator.vibrate(50);
-        setToastMsg(`Saved $${numAmount} for ${category}`);
-        setTimeout(() => setToastMsg(""), 2500);
+        showToast(`Saved $${numAmount} for ${category}`);
         setAmount("0"); setCategory(""); setNote(""); setSelectedDate(toLocalDateStr(new Date()));
         fetchData();
-      } else alert("Error: " + error.message);
+      } else showToast(error.message, "error");
     }
   };
 
-  const handleDeleteTx = async (id: string) => {
-    if (window.confirm("Delete this transaction?")) {
-      await supabase.from('transactions').delete().eq('id', id);
-      if (editingTransaction?.id === id) handleCancel();
-      fetchData();
-    }
+  const confirmDeleteTx = async () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id;
+    setDeleteTarget(null);
+    await supabase.from('transactions').delete().eq('id', id);
+    if (editingTransaction?.id === id) handleCancel();
+    fetchData();
   };
 
   return (
     <main className="flex flex-col max-w-md mx-auto shadow-2xl relative min-h-[100dvh] pb-32 bg-surface">
-      {toastMsg && (
-        <div className="fixed top-28 left-1/2 -translate-x-1/2 z-[60] transition-all">
-          <div className="bg-action text-fg-on-action px-5 py-3 rounded-full shadow-2xl text-sm font-medium flex items-center space-x-2 border border-gray-700/50">
-            <Check size={16} className="text-positive" /><span>{toastMsg}</span>
-          </div>
-        </div>
-      )}
+      <Toast message={toastMsg} variant={toastVariant} />
       <TopHeader />
 
       {editingTransaction && (
@@ -197,9 +196,7 @@ export default function EntryScreen({
         ) : (
           <>
             {pinnedCategories.map((cat) => {
-              const label = cat.name.includes(" - ")
-                ? cat.name.split(" - ").slice(1).join(" - ")
-                : cat.name;
+              const label = getCategorySubLabel(cat.name);
               return (
                 <button
                   key={cat.id}
@@ -263,7 +260,7 @@ export default function EntryScreen({
                   <ChevronRight size={14} className="text-fg-muted" />
                 </div>
               </button>
-              <button onClick={() => handleDeleteTx(tx.id)} className="px-4 text-delete-icon hover:text-red-500 border-l border-line-subtle">
+              <button onClick={() => setDeleteTarget(tx)} className="px-4 text-delete-icon hover:text-red-500 border-l border-line-subtle">
                 <Trash2 size={18} />
               </button>
             </div>
@@ -305,7 +302,7 @@ export default function EntryScreen({
                     <ChevronRight size={14} className="text-fg-muted" />
                   </div>
                 </button>
-                <button onClick={() => handleDeleteTx(tx.id)} className="px-4 text-delete-icon hover:text-red-500 border-l border-line-subtle">
+                <button onClick={() => setDeleteTarget(tx)} className="px-4 text-delete-icon hover:text-red-500 border-l border-line-subtle">
                   <Trash2 size={18} />
                 </button>
               </div>
@@ -313,6 +310,14 @@ export default function EntryScreen({
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete this transaction?"
+        message={deleteTarget ? `${deleteTarget.category} - $${deleteTarget.amount.toFixed(2)}` : undefined}
+        onConfirm={confirmDeleteTx}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </main>
   );
 }

@@ -18,6 +18,7 @@ import {
 import TopHeader from "./TopHeader";
 import { computeMonthData, computeHistoricalData } from "../lib/insights";
 import { INSIGHT_COLORS } from "../lib/constants";
+import { getCategoryGroup, getCategorySubLabel } from "@/lib/categoryGroups";
 import type { AppUser, Budget, Income, Transaction } from "@/lib/types";
 
 export default function InsightsScreen({
@@ -52,7 +53,7 @@ export default function InsightsScreen({
       .filter(tx => {
         const d = new Date(tx.date);
         const matchesMonth = d >= start && d <= end;
-        const groupName = tx.category.includes(' - ') ? tx.category.split(' - ')[0].trim() : tx.category;
+        const groupName = getCategoryGroup(tx.category);
         return matchesMonth && (tx.category === drillCategory || groupName === drillCategory);
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -256,7 +257,7 @@ export default function InsightsScreen({
                       <div className="mt-2 pl-3 space-y-2 border-l-2 border-line-subtle ml-1">
                         {Object.entries(item.subs).map(([subName, subValue]) => (
                           <div key={subName} className="flex justify-between items-center text-xs">
-                            <span className="text-fg-secondary">{subName.split(' - ')[1] || subName}</span>
+                            <span className="text-fg-secondary">{getCategorySubLabel(subName)}</span>
                             <span className="font-medium text-fg-mid">${(subValue as number).toFixed(2)}</span>
                           </div>
                         ))}
@@ -362,7 +363,7 @@ export default function InsightsScreen({
                   const txDate = new Date(tx.date);
                   const dateLabel = txDate.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
                   const showCategory = isGroupCategory && tx.category !== drillCategory;
-                  const subLabel = showCategory ? (tx.category.split(' - ')[1] || tx.category) : null;
+                  const subLabel = showCategory ? getCategorySubLabel(tx.category) : null;
                   return (
                     <div
                       key={tx.id}

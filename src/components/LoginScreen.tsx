@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { createClient } from "../lib/supabase";
+import Toast from "./Toast";
+import { useToast } from "../hooks/useToast";
 
 const supabase = createClient();
 
@@ -9,20 +11,25 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { message: toastMsg, variant: toastVariant, showToast } = useToast();
 
   const handleAuth = async (action: 'login' | 'signup') => {
-    if (!email || !password) return alert("Please enter both email and password.");
+    if (!email || !password) {
+      showToast("Enter both email and password.", "error");
+      return;
+    }
     setIsLoading(true);
     try {
       if (action === 'signup') {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
+        showToast("Account created - check your email if verification is required.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Something went wrong.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -30,6 +37,7 @@ export default function LoginScreen() {
 
   return (
     <main className="flex min-h-[100dvh] flex-col items-center justify-center bg-surface p-6 max-w-md mx-auto shadow-2xl">
+      <Toast message={toastMsg} variant={toastVariant} />
       <div className="w-full bg-surface-card p-8 rounded-3xl shadow-sm border border-line-subtle">
         <h1 className="text-3xl font-bold text-fg-base mb-2">Moneyball</h1>
         <p className="text-fg-secondary mb-8 text-sm">Sign in to sync your budget.</p>
