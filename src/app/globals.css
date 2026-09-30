@@ -255,8 +255,26 @@
   }
 }
 
+/* The root carries the theme background and color-scheme so iOS paints the
+   status bar area, overscroll and native controls (date picker) in-theme. */
+:root {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+  }
+}
+
+html,
 body {
-  background: var(--surface);
+  background-color: var(--surface);
+}
+
+body {
   color: var(--fg-base);
 }
 

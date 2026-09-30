@@ -37,6 +37,45 @@ function BudgetBadge({ item }: { item: ChartItem }) {
   );
 }
 
+const ROW_CLASS = "-mx-2 flex flex-col rounded-xl px-2 py-1.5 text-left transition-colors active:bg-pressed";
+
+function AmountLink({ value, hidden = false }: { value: number; hidden?: boolean }) {
+  // `hidden` renders an invisible copy that reserves space under the overlaid amount button.
+  return (
+    <span aria-hidden={hidden || undefined} className={`flex shrink-0 items-center gap-1 ${hidden ? "invisible" : ""}`}>
+      <span className="text-sm font-semibold text-fg-base tabular-nums">{formatAUD(value)}</span>
+      <ChevronRight size={14} className="text-fg-muted" />
+    </span>
+  );
+}
+
+function CategoryRowBody({ item, expanded, trailing }: { item: ChartItem; expanded?: boolean; trailing: React.ReactNode }) {
+  const barWidth = item.budgetPercent !== null ? `${Math.min(item.budgetPercent, 100)}%` : '100%';
+  return (
+    <>
+      <span className="flex w-full items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate text-sm font-medium text-fg-mid">{item.name}</span>
+          <BudgetBadge item={item} />
+          {expanded !== undefined && (
+            <ChevronDown size={16} className={`shrink-0 text-fg-muted transition-transform ${expanded ? 'rotate-180' : ''}`} />
+          )}
+        </span>
+        {trailing}
+      </span>
+      <span className="mt-1.5 block h-1.5 w-full overflow-hidden rounded-full bg-surface-inset">
+        <span
+          className="block h-1.5 rounded-full transition-[width] duration-500"
+          style={{ width: barWidth, backgroundColor: INSIGHT_COLORS[item.budgetStatus] }}
+        />
+      </span>
+      <span className="mt-1 text-xs text-fg-muted">
+        {item.budgetLimit !== null ? `${formatAUD(item.budgetLimit)} budget` : 'No budget set'}
+      </span>
+    </>
+  );
+}
+
 export default function InsightsScreen({
   budgets,
   income,
@@ -230,49 +269,40 @@ export default function InsightsScreen({
               {chartData.map(item => {
                 const hasSubs = Object.keys(item.subs).length > 1;
                 const isExpanded = !!expandedGroups[item.name];
-                const barWidth = item.budgetPercent !== null ? `${Math.min(item.budgetPercent, 100)}%` : '100%';
                 const subsId = `subs-${item.name}`;
 
                 return (
                   <li key={item.name}>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => openDrill(item.name)}
-                        className="-mx-2 flex min-w-0 flex-1 flex-col rounded-xl px-2 py-1.5 text-left transition-colors active:bg-pressed"
-                      >
-                        <span className="flex w-full items-center justify-between gap-2">
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <span className="truncate text-sm font-medium text-fg-mid">{item.name}</span>
-                            <BudgetBadge item={item} />
-                          </span>
-                          <span className="flex shrink-0 items-center gap-1">
-                            <span className="text-sm font-semibold text-fg-base tabular-nums">{formatAUD(item.value)}</span>
-                            <ChevronRight size={14} className="text-fg-muted" />
-                          </span>
-                        </span>
-                        <span className="mt-1.5 block h-1.5 w-full overflow-hidden rounded-full bg-surface-inset">
-                          <span
-                            className="block h-1.5 rounded-full transition-[width] duration-500"
-                            style={{ width: barWidth, backgroundColor: INSIGHT_COLORS[item.budgetStatus] }}
-                          />
-                        </span>
-                        <span className="mt-1 text-xs text-fg-muted">
-                          {item.budgetLimit !== null ? `${formatAUD(item.budgetLimit)} budget` : 'No budget set'}
-                        </span>
-                      </button>
-                      {hasSubs && (
-                        <IconButton
-                          label={`${isExpanded ? "Hide" : "Show"} ${item.name} breakdown`}
+                    {hasSubs ? (
+                      // Groups: the row expands the breakdown; the amount opens the transactions.
+                      <div className="relative">
+                        <button
+                          type="button"
                           aria-expanded={isExpanded}
                           aria-controls={subsId}
                           onClick={() => setExpandedGroups(p => ({ ...p, [item.name]: !p[item.name] }))}
-                          className="-mr-2 text-fg-muted"
+                          className={`${ROW_CLASS} w-[calc(100%+1rem)]`}
                         >
-                          <ChevronDown size={18} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                        </IconButton>
-                      )}
-                    </div>
+                          <CategoryRowBody item={item} expanded={isExpanded} trailing={<AmountLink value={item.value} hidden />} />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`View ${item.name} transactions, ${formatAUD(item.value)}`}
+                          onClick={() => openDrill(item.name)}
+                          className="absolute -right-2 top-0 flex min-h-11 items-start rounded-xl px-2 pt-1.5 transition-colors active:bg-pressed"
+                        >
+                          <AmountLink value={item.value} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => openDrill(item.name)}
+                        className={`${ROW_CLASS} w-[calc(100%+1rem)]`}
+                      >
+                        <CategoryRowBody item={item} trailing={<AmountLink value={item.value} />} />
+                      </button>
+                    )}
                     {hasSubs && isExpanded && (
                       <ul id={subsId} className="ml-1 mt-2 space-y-2 border-l-2 border-line-subtle pl-3">
                         {Object.entries(item.subs).map(([subName, subValue]) => (

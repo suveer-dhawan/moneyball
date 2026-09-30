@@ -20,13 +20,10 @@ export const metadata: Metadata = {
   },
 };
 
-// Initial values match --surface for light and dark; useTheme keeps these
-// tags in sync with the chosen theme (including Warm) after load.
+// A single theme-color tag (no media variants) that the boot script and
+// useTheme overwrite with the active theme's --surface.
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f9fafb" },
-    { media: "(prefers-color-scheme: dark)", color: "#111827" },
-  ],
+  themeColor: "#f9fafb",
   viewportFit: "cover",
   width: "device-width",
   initialScale: 1,
@@ -47,6 +44,9 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+        {/* Solid theme color behind the notch/status bar. iOS 26 Safari tints the
+            status bar from fixed elements at the top rather than theme-color. */}
+        <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 top-0 z-[45] h-[env(safe-area-inset-top)] bg-surface" />
         {children}
       </body>
     </html>
