@@ -78,7 +78,7 @@ Later phases use what it adds.
 
 ---
 
-## Phase 2: App shell and shared components
+## Phase 2: App shell and shared components - done
 
 Touches: `MoneyballApp.tsx`, `TopHeader.tsx`, `BottomNav.tsx`, `Toast.tsx`,
 `ConfirmDialog.tsx`, `CategoryPicker.tsx`, `hooks/useAppData.ts`,
@@ -87,51 +87,53 @@ Touches: `MoneyballApp.tsx`, `TopHeader.tsx`, `BottomNav.tsx`, `Toast.tsx`,
 It also makes small, mechanical edits to each screen's `<main>` wrapper.
 
 ### Layout and safe areas
-- [ ] Move the `max-w-md mx-auto` container into `MoneyballApp`. Remove `shadow-2xl`, `max-w-md` and `mx-auto` from every screen's `<main>`.
-- [ ] Give the top safe-area inset a single owner, the header. Remove the extra `pt-[env(safe-area-inset-top)]` on the Income, Insights and Settings `<main>`s, and the `-mt-[env(...)]` hack in Entry.
-- [ ] Toasts: position below the safe area instead of at a fixed `top-28`
+- [x] Move the `max-w-md mx-auto` container into `MoneyballApp`. Remove `shadow-2xl`, `max-w-md` and `mx-auto` from every screen's `<main>`.
+- [x] Give the top safe-area inset a single owner, the header. Remove the extra `pt-[env(safe-area-inset-top)]` on the Income, Insights and Settings `<main>`s, and the `-mt-[env(...)]` hack in Entry.
+- [x] Toasts: position below the safe area instead of at a fixed `top-28`
 
 ### TopHeader to screen header (D5)
-- [ ] Replace the floating "MONEYBALL" pill with a sticky screen title (`sticky top-0`, solid surface background, hairline border that appears once the page scrolls)
-- [ ] Accept `title` and an optional `trailing` slot (Insights will put its month switcher here in Phase 3)
+- [x] Replace the floating "MONEYBALL" pill with a sticky screen title (`sticky top-0`, solid surface background, hairline border that appears once the page scrolls)
+- [x] Accept `title` and an optional `trailing` slot (Insights will put its month switcher here in Phase 3)
 
 ### BottomNav
-- [ ] Type the tabs with `Tab`; rename the internal `"summary"` tab to `"insights"`
-- [ ] Reduce the height to roughly 49pt plus the safe area (currently `pt-4` plus the inset plus `1rem`)
-- [ ] Add `aria-current="page"` on the active tab
-- [ ] Use 12px labels
-- [ ] Rebuild the four buttons from one map instead of four copy-pasted blocks
-- [ ] Reconsider the Home icon for "Entry" (e.g. `PlusCircle`)
+- [x] Type the tabs with `Tab`; rename the internal `"summary"` tab to `"insights"`
+- [x] Reduce the height to roughly 49pt plus the safe area (currently `pt-4` plus the inset plus `1rem`)
+- [x] Add `aria-current="page"` on the active tab
+- [x] Use 12px labels
+- [x] Rebuild the four buttons from one map instead of four copy-pasted blocks
+- [x] Reconsider the Home icon for "Entry" (e.g. `PlusCircle`)
 
 ### Sheet (new) used by every overlay
-- [ ] `role="dialog"`, `aria-modal`, and `aria-labelledby` pointing at the title
-- [ ] Focus moves into the sheet on open and returns to the triggering control on close; Escape closes it
-- [ ] Lock page scrolling while open
-- [ ] Use the Phase 1 keyframes for enter/exit (D1)
-- [ ] Remove the drag handle (D2)
-- [ ] Rebuild `ConfirmDialog`, `CategoryPicker`, the Entry "This Month" modal and the Insights drill-down on it
+- [x] `role="dialog"`, `aria-modal`, and `aria-labelledby` pointing at the title
+- [x] Focus moves into the sheet on open and returns to the triggering control on close; Escape closes it
+- [x] Lock page scrolling while open
+- [x] Use the Phase 1 keyframes for enter/exit (D1)
+- [x] Remove the drag handle (D2)
+- [x] Rebuild `ConfirmDialog`, `CategoryPicker`, the Entry "This Month" modal and the Insights drill-down on it
 
 ### Shared primitives (new)
-- [ ] `IconButton`: at least a 44×44px hit area, with a required `label` prop that becomes `aria-label`. Use it for every icon-only button:
-  - [ ] Trash and delete ×
-  - [ ] Plus (add category)
-  - [ ] Back chevron and close ×
-  - [ ] Month arrows
-- [ ] `DateChip`: the chip and hidden date input duplicated in Entry and Income
-- [ ] `TransactionRow`: the row duplicated twice in EntryScreen. Uses `formatAUD`, `tabular-nums` and the `--pressed` state, and drops `hover:` classes (hover stays stuck after a tap on iOS).
-- [ ] `EmptyState`: short, non-italic guidance text with an optional action, replacing the grey italic "No entries." messages
+- [x] `IconButton`: at least a 44×44px hit area, with a required `label` prop that becomes `aria-label`. Use it for every icon-only button:
+  - [x] Trash and delete ×
+  - [x] Plus (add category)
+  - [x] Back chevron and close ×
+  - [x] Month arrows
+- [x] `DateChip`: the chip and hidden date input duplicated in Entry and Income
+- [x] `TransactionRow`: the row duplicated twice in EntryScreen. Uses `formatAUD`, `tabular-nums` and the `--pressed` state, and drops `hover:` classes (hover stays stuck after a tap on iOS).
+- [x] `EmptyState`: short, non-italic guidance text with an optional action, replacing the grey italic "No entries." messages
 
 ### Toast and undo (D3)
-- [ ] Add `role="status"` / `aria-live="polite"`
-- [ ] Replace the hardcoded `border-gray-700/50` with a token
-- [ ] Extend `useToast` to accept an optional action (`{ label: "Undo", onAction }`) and keep the toast up longer when it has one
-- [ ] Add a delete-with-undo helper: remove the row locally, show the undo toast, and commit the delete when the toast expires. Restore the row and show an error toast if the delete fails. This also fixes deletes currently failing silently.
+- [x] Add `role="status"` / `aria-live="polite"`
+- [x] Replace the hardcoded `border-gray-700/50` with a token
+- [x] Extend `useToast` to accept an optional action (`{ label: "Undo", onAction }`) and keep the toast up longer when it has one
+- [x] Add a delete-with-undo helper: remove the row locally, show the undo toast, and commit the delete when the toast expires. Restore the row and show an error toast if the delete fails. This also fixes deletes currently failing silently.
 
 ### Data layer
-- [ ] `useAppData`: show `loadingData` only on the first load, so later refetches don't flicker the pinned row to a spinner
-- [ ] Add optimistic `add`/`update`/`remove` helpers so saves appear instantly; reconcile with a quiet background refetch
-- [ ] Surface fetch errors through a toast instead of only `console.error`
-- [ ] Remove all `navigator.vibrate` calls (D6)
+- [x] `useAppData`: show `loadingData` only on the first load, so later refetches don't flicker the pinned row to a spinner
+- [x] Add `add`/`update`/`remove` helpers that update local state instead of refetching all four tables.
+  - Changed during implementation: deletes are optimistic (via undo), but saves wait for Supabase and then use the returned row, so the app never shows "Saved" for something that failed.
+  - The quiet refetch happens when the app comes back to the foreground.
+- [x] Surface fetch errors through a toast instead of only `console.error`
+- [x] Remove all `navigator.vibrate` calls (D6)
 
 ---
 
@@ -144,21 +146,21 @@ comments.
 
 ### EntryScreen
 - [ ] Keypad presses use the `--pressed` token (the pressed state is currently invisible in dark mode at 1.18:1)
-- [ ] Guard Save/Update against double taps: disable while saving and show a spinner
-- [ ] Toast copy uses `formatAUD` ("Saved $12.50 · Coffee", not "$12.5")
+- [x] Guard Save/Update against double taps: disable while saving and show a spinner *(done in Phase 2)*
+- [x] Toast copy uses `formatAUD` ("Saved $12.50 · Coffee", not "$12.5") *(done in Phase 2)*
 - [ ] Make the note field a fixed, usable width instead of animating from `w-20` to `w-32`
 - [ ] Show the selected category's short name (sub-label) in the chip, to match the pinned buttons
 - [ ] Recent Activity: order by `created_at` so a just-saved backdated entry still appears, or show it briefly at the top
 - [ ] "This Month" sheet:
-  - [ ] Use `Sheet`
+  - [x] Use `Sheet` *(done in Phase 2)*
   - [ ] Use tokenized borders (the bare `border-b` currently draws in the text color)
   - [ ] Show the month total in the header
-  - [ ] Add an empty state
+  - [x] Add an empty state *(done in Phase 2)*
 
 ### IncomeScreen
 - [ ] Add Income button uses the green fill with `--on-positive` text; add visible disabled/loading styling
-- [ ] Income amounts use `--positive-fg`
-- [ ] Add an empty state for Income History (currently it shows nothing)
+- [x] Income amounts use `--positive-fg` *(done in Phase 2)*
+- [x] Add an empty state for Income History (currently it shows nothing) *(done in Phase 2)*
 - [ ] Use `DateChip`, and undo-delete via `IconButton`
 
 ### InsightsScreen

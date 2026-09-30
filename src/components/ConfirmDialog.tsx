@@ -1,5 +1,8 @@
 "use client";
 
+import { useState } from "react";
+import Sheet from "./Sheet";
+
 export default function ConfirmDialog({
   open,
   title,
@@ -19,36 +22,30 @@ export default function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  if (!open) return null;
+  // Keep the last text while the sheet animates out, after the caller clears its target.
+  const [shown, setShown] = useState({ title, message });
+  if (open && (shown.title !== title || shown.message !== message)) setShown({ title, message });
 
   return (
-    <div className="fixed inset-0 z-[120] flex flex-col justify-end">
-      <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
-      <div className="relative bg-surface rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom-full duration-300 pb-[env(safe-area-inset-bottom)]">
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full bg-line-default" />
-        </div>
-        <div className="px-6 pt-2 pb-6">
-          <h2 className="text-base font-bold text-fg-base mb-1">{title}</h2>
-          {message && <p className="text-sm text-fg-secondary mb-6">{message}</p>}
-          <div className="flex gap-3 mt-2">
-            <button
-              onClick={onCancel}
-              className="flex-1 bg-surface-inset text-fg-secondary py-3.5 rounded-2xl font-bold active:scale-[0.98] border border-line-default"
-            >
-              {cancelLabel}
-            </button>
-            <button
-              onClick={onConfirm}
-              className={`flex-1 py-3.5 rounded-2xl font-bold active:scale-[0.98] ${
-                destructive ? "bg-destructive-bg text-destructive-fg" : "bg-action text-fg-on-action"
-              }`}
-            >
-              {confirmLabel}
-            </button>
-          </div>
-        </div>
+    <Sheet open={open} onClose={onCancel} title={shown.title} description={shown.message} showClose={false}>
+      <div className="flex gap-3 px-5 pb-6 pt-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 rounded-2xl border border-line-default bg-surface-inset py-3.5 font-bold text-fg-secondary transition-colors active:bg-pressed"
+        >
+          {cancelLabel}
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          className={`flex-1 rounded-2xl py-3.5 font-bold active:opacity-80 ${
+            destructive ? "bg-destructive-bg text-destructive-fg" : "bg-action text-fg-on-action"
+          }`}
+        >
+          {confirmLabel}
+        </button>
       </div>
-    </div>
+    </Sheet>
   );
 }

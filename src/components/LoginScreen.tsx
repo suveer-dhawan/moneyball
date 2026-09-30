@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { createClient } from "../lib/supabase";
-import Toast from "./Toast";
 import { useToast } from "../hooks/useToast";
 
 const supabase = createClient();
@@ -11,7 +10,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { message: toastMsg, variant: toastVariant, showToast } = useToast();
+  const showToast = useToast();
 
   const handleAuth = async (action: 'login' | 'signup') => {
     if (!email || !password) {
@@ -37,7 +36,6 @@ export default function LoginScreen() {
 
   return (
     <main className="flex min-h-[100dvh] flex-col items-center justify-center bg-surface p-6 max-w-md mx-auto shadow-2xl">
-      <Toast message={toastMsg} variant={toastVariant} />
       <div className="w-full bg-surface-card p-8 rounded-3xl shadow-sm border border-line-subtle">
         <h1 className="text-3xl font-bold text-fg-base mb-2">Moneyball</h1>
         <p className="text-fg-secondary mb-8 text-sm">Sign in to sync your budget.</p>

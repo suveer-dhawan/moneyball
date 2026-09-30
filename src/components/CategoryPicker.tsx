@@ -1,18 +1,28 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { X, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { hasCategoryGroup, getCategoryGroup, getCategorySubLabel } from "@/lib/categoryGroups";
 import type { Category } from "@/lib/types";
+import Sheet from "./Sheet";
+import EmptyState from "./EmptyState";
 
 interface CategoryPickerProps {
+  open: boolean;
   categories: Category[];
   onSelect: (name: string) => void;
   onClose: () => void;
 }
 
-export default function CategoryPicker({ categories, onSelect, onClose }: CategoryPickerProps) {
+export default function CategoryPicker({ open, categories, onSelect, onClose }: CategoryPickerProps) {
   const [search, setSearch] = useState("");
+  const [wasOpen, setWasOpen] = useState(open);
+
+  // Start each opening with an empty search.
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setSearch("");
+  }
 
   const grouped = useMemo(() => {
     if (search.trim()) {
@@ -45,69 +55,43 @@ export default function CategoryPicker({ categories, onSelect, onClose }: Catego
   };
 
   return (
-    <>
-      {/* Overlay */}
-      <div
-        className="fixed inset-0 z-[99] bg-black/40"
-        onClick={onClose}
-      />
-
-      {/* Sheet */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-[100] bg-surface rounded-t-3xl shadow-2xl flex flex-col max-h-[60vh] animate-in slide-in-from-bottom duration-300">
-        {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1 shrink-0">
-          <div className="w-10 h-1 rounded-full bg-line-default" />
-        </div>
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 shrink-0">
-          <h2 className="font-bold text-fg-base text-base">All Categories</h2>
-          <button onClick={onClose} className="p-1 text-fg-muted">
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Search */}
-        <div className="px-5 pb-3 shrink-0">
-          <div className="flex items-center bg-surface-inset rounded-xl px-3 py-2 gap-2">
-            <Search size={15} className="text-fg-muted shrink-0" />
-            <input
-              type="text"
-              placeholder="Search categories..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="bg-transparent outline-none text-fg-base text-[16px] flex-1 placeholder:text-fg-muted"
-            />
-          </div>
-        </div>
-
-        {/* Groups */}
-        <div className="overflow-y-auto px-5 pb-8">
-          {grouped.map(({ header, items }) => (
-            <div key={header} className="mb-5">
-              <p className="text-[11px] font-semibold text-fg-muted uppercase tracking-wider mb-2">{header}</p>
-              <div className="space-y-1">
-                {items.map((cat) => {
-                  const label =
-                    !isFlat && header !== "Other" ? getCategorySubLabel(cat.name) : cat.name;
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => handleSelect(cat.name)}
-                      className="w-full text-left px-4 py-3 rounded-xl bg-surface-card border border-line-subtle text-fg-base text-sm font-medium active:bg-surface-inset transition-colors"
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-          {grouped.length === 1 && grouped[0].items.length === 0 && (
-            <p className="text-center text-fg-muted text-sm italic py-8">No categories found.</p>
-          )}
-        </div>
+    <Sheet open={open} onClose={onClose} title="All categories" className="h-[70dvh]">
+      <div className="shrink-0 px-5 pb-3">
+        <label className="flex items-center gap-2 rounded-xl bg-surface-inset px-3 py-2 focus-within:ring-2 focus-within:ring-focus-ring">
+          <Search size={16} className="shrink-0 text-fg-muted" />
+          <input
+            type="search"
+            aria-label="Search categories"
+            placeholder="Search categories"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1 bg-transparent text-[16px] text-fg-base outline-none placeholder:text-fg-muted"
+          />
+        </label>
       </div>
-    </>
+
+      <div className="overflow-y-auto overscroll-contain px-5 pb-8">
+        {grouped.map(({ header, items }) => items.length > 0 && (
+          <section key={header} className="mb-5">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-muted">{header}</h3>
+            <div className="space-y-1">
+              {items.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => handleSelect(cat.name)}
+                  className="w-full rounded-xl border border-line-subtle bg-surface-card px-4 py-3 text-left text-sm font-medium text-fg-base transition-colors active:bg-pressed"
+                >
+                  {!isFlat && header !== "Other" ? getCategorySubLabel(cat.name) : cat.name}
+                </button>
+              ))}
+            </div>
+          </section>
+        ))}
+        {grouped.every((g) => g.items.length === 0) && (
+          <EmptyState title="No matching categories" hint="Add new categories in Settings." />
+        )}
+      </div>
+    </Sheet>
   );
 }

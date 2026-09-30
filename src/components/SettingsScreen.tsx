@@ -3,11 +3,10 @@
 import { useState } from "react";
 import { Loader2, Plus, X, Monitor, Sun, Moon, Leaf } from "lucide-react";
 import { createClient } from "../lib/supabase";
-import TopHeader from "./TopHeader";
+import ScreenHeader from "./ScreenHeader";
 import BudgetInput from "./BudgetInput";
-import Toast from "./Toast";
 import ConfirmDialog from "./ConfirmDialog";
-import { useToast } from "../hooks/useToast";
+import IconButton from "./IconButton";
 import { type ThemePreference } from "../hooks/useTheme";
 import type { AppUser, Category, Budget } from "@/lib/types";
 
@@ -26,7 +25,9 @@ export default function SettingsScreen({
   user,
   categories,
   budgets,
-  fetchData,
+  addCategory,
+  deleteCategory,
+  setBudget,
   themePreference,
   setThemePreference,
   pinnedNames,
@@ -36,7 +37,9 @@ export default function SettingsScreen({
   user: AppUser;
   categories: Category[];
   budgets: Budget[];
-  fetchData: () => void;
+  addCategory: (name: string) => Promise<boolean>;
+  deleteCategory: (cat: Category) => Promise<void>;
+  setBudget: (category: string, value: string) => Promise<void>;
   themePreference: ThemePreference;
   setThemePreference: (p: ThemePreference) => void;
   pinnedNames: string[];
@@ -46,7 +49,6 @@ export default function SettingsScreen({
   const [newCatName, setNewCatName] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
-  const { message: toastMsg, variant: toastVariant, showToast } = useToast();
 
   const handleLogout = async () => await supabase.auth.signOut();
 
@@ -54,48 +56,23 @@ export default function SettingsScreen({
     const name = newCatName.trim();
     if (!name) return;
     setIsAdding(true);
-    const { error } = await supabase.from('user_categories').insert({ name, user_id: user.id });
-    if (!error) {
-      setNewCatName("");
-      fetchData();
-    } else if (error.code === '23505') {
-      showToast(`"${name}" already exists.`, "error");
-    } else {
-      showToast(error.message, "error");
-    }
+    if (await addCategory(name)) setNewCatName("");
     setIsAdding(false);
   };
 
-  const confirmDeleteCategory = async () => {
+  const confirmDeleteCategory = () => {
     if (!deleteTarget) return;
-    const id = deleteTarget.id;
+    const target = deleteTarget;
     setDeleteTarget(null);
-    await supabase.from('user_categories').delete().eq('id', id);
-    fetchData();
-  };
-
-  const handleSetBudget = async (categoryName: string, value: string) => {
-    if (!value || value.trim() === "") {
-      const { error } = await supabase.from('budgets').delete().match({ user_id: user.id, category: categoryName });
-      if (!error) fetchData();
-      else showToast(error.message, "error");
-      return;
-    }
-    const { error } = await supabase.from('budgets').upsert(
-      { user_id: user.id, category: categoryName, limit_amount: parseFloat(value) },
-      { onConflict: 'user_id, category' }
-    );
-    if (!error) fetchData();
-    else showToast(error.message, "error");
+    void deleteCategory(target);
   };
 
   const atLimit = pinnedNames.length >= MAX_PINS;
 
   return (
-    <main className="flex flex-col max-w-md mx-auto shadow-2xl relative min-h-[100dvh] pb-32 bg-surface pt-[env(safe-area-inset-top)]">
-      <Toast message={toastMsg} variant={toastVariant} />
-      <TopHeader />
-      <div className="pt-6 px-6 space-y-4">
+    <main>
+      <ScreenHeader title="Settings" />
+      <div className="pt-2 px-6 space-y-4">
 
         {/* 1. Appearance */}
         <div className="bg-surface-card p-6 rounded-3xl shadow-sm border border-line-default">
@@ -151,6 +128,7 @@ export default function SettingsScreen({
             <div className="flex space-x-2">
               <input
                 type="text"
+                aria-label="New category name"
                 placeholder="New category..."
                 value={newCatName}
                 onChange={(e) => setNewCatName(e.target.value)}
@@ -158,9 +136,11 @@ export default function SettingsScreen({
                 className="flex-grow bg-surface-card border border-line-default px-4 py-2 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-focus-ring"
               />
               <button
+                type="button"
+                aria-label="Add category"
                 onClick={handleAddCategory}
                 disabled={isAdding || !newCatName.trim()}
-                className="bg-action text-fg-on-action p-2 px-4 rounded-xl active:scale-95 disabled:opacity-50"
+                className="min-h-11 bg-action text-fg-on-action px-4 rounded-xl active:scale-95 disabled:opacity-50"
               >
                 {isAdding ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
               </button>
@@ -170,11 +150,11 @@ export default function SettingsScreen({
             {categories.map((cat) => {
               const currentBudget = budgets.find(b => b.category === cat.name)?.limit_amount?.toString() || '';
               return (
-                <div key={cat.id} className="flex justify-between items-center p-3 hover:bg-surface rounded-xl transition-colors">
+                <div key={cat.id} className="flex justify-between items-center p-3 rounded-xl">
                   <span className="text-sm font-medium text-fg-mid flex-1 pr-3 leading-tight break-words">{cat.name}</span>
                   <div className="flex items-center space-x-2 shrink-0">
-                    <BudgetInput initialValue={currentBudget} onSave={(val) => handleSetBudget(cat.name, val)} />
-                    <button onClick={() => setDeleteTarget(cat)} className="text-delete-icon hover:text-red-500 p-2"><X size={16} /></button>
+                    <BudgetInput initialValue={currentBudget} onSave={(val) => void setBudget(cat.name, val)} />
+                    <IconButton label={`Delete ${cat.name}`} onClick={() => setDeleteTarget(cat)} className="text-delete-icon"><X size={16} /></IconButton>
                   </div>
                 </div>
               );

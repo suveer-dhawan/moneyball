@@ -1,47 +1,48 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Delete, Calendar, PenLine, Loader2, Trash2, ChevronLeft, LayoutGrid, ChevronRight } from "lucide-react";
-import { createClient } from "../lib/supabase";
-import TopHeader from "./TopHeader";
+import { Delete, PenLine, Loader2, LayoutGrid } from "lucide-react";
+import ScreenHeader from "./ScreenHeader";
 import CategoryPicker from "./CategoryPicker";
-import Toast from "./Toast";
-import ConfirmDialog from "./ConfirmDialog";
+import DateChip from "./DateChip";
+import TransactionRow from "./TransactionRow";
+import EmptyState from "./EmptyState";
+import Sheet from "./Sheet";
+import IconButton from "./IconButton";
 import { useToast } from "../hooks/useToast";
-import { toLocalDateStr, daysAgoStr, relativeDayLabel } from "@/lib/dates";
+import type { TransactionInput } from "../hooks/useAppData";
 import { getCategorySubLabel } from "@/lib/categoryGroups";
-import type { AppUser, Category, Transaction } from "@/lib/types";
+import { toLocalDateStr } from "@/lib/dates";
+import { formatAUD } from "@/lib/format";
+import type { Category, Transaction } from "@/lib/types";
 
-const supabase = createClient();
+const shortDate = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
 export default function EntryScreen({
-  user,
   categories,
-  loadingCats,
+  loading,
   transactions,
-  fetchData,
+  saveTransaction,
+  deleteTransaction,
   pinnedNames,
 }: {
-  user: AppUser;
   categories: Category[];
-  loadingCats: boolean;
+  loading: boolean;
   transactions: Transaction[];
-  fetchData: () => void;
+  saveTransaction: (input: TransactionInput, id?: string) => Promise<boolean>;
+  deleteTransaction: (tx: Transaction) => void;
   pinnedNames: string[];
 }) {
   const [amount, setAmount] = useState("0");
   const [category, setCategory] = useState("");
   const [selectedDate, setSelectedDate] = useState(() => toLocalDateStr(new Date()));
   const [note, setNote] = useState("");
-  const { message: toastMsg, variant: toastVariant, showToast } = useToast();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const showToast = useToast();
+  const [isMonthOpen, setIsMonthOpen] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
-
-  const todayStr = toLocalDateStr(new Date());
-  const minDateStr = daysAgoStr(60);
-  const chipLabel = relativeDayLabel(selectedDate);
 
   const pinnedCategories = useMemo(
     () => pinnedNames.map((name) => categories.find((c) => c.name === name)).filter(Boolean) as Category[],
@@ -56,6 +57,14 @@ export default function EntryScreen({
     return transactions.filter(tx => new Date(tx.date) >= firstDay);
   }, [transactions]);
 
+  const resetForm = () => {
+    setEditingTransaction(null);
+    setAmount("0");
+    setCategory("");
+    setNote("");
+    setSelectedDate(toLocalDateStr(new Date()));
+  };
+
   const startEditing = (tx: Transaction) => {
     setEditingTransaction(tx);
     setAmount(tx.amount.toString());
@@ -63,14 +72,6 @@ export default function EntryScreen({
     setNote(tx.notes ?? "");
     setSelectedDate(toLocalDateStr(new Date(tx.date)));
     window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleCancel = () => {
-    setEditingTransaction(null);
-    setAmount("0");
-    setCategory("");
-    setNote("");
-    setSelectedDate(toLocalDateStr(new Date()));
   };
 
   const handlePress = (val: string) => {
@@ -83,81 +84,55 @@ export default function EntryScreen({
     }
   };
 
-  const handleDelete = () => {
-    amount.length === 1 ? setAmount("0") : setAmount((prev) => prev.slice(0, -1));
+  const handleBackspace = () => {
+    setAmount((prev) => (prev.length === 1 ? "0" : prev.slice(0, -1)));
   };
 
   const handleSave = async () => {
-    if (amount === "0" || !category) {
-      if (navigator.vibrate) navigator.vibrate([20, 50, 20]);
+    if (saving) return;
+    const numAmount = parseFloat(amount);
+    if (!numAmount || !category) {
       showToast("Enter an amount and select a category.", "error");
       return;
     }
-    const numAmount = parseFloat(amount);
-    const txDate = new Date(selectedDate + "T12:00:00");
-
-    if (editingTransaction) {
-      const { error } = await supabase.from('transactions').update({
-        amount: numAmount, category, notes: note, date: txDate.toISOString(),
-      }).eq('id', editingTransaction.id);
-      if (!error) {
-        if (navigator.vibrate) navigator.vibrate(50);
-        showToast(`Updated $${numAmount} for ${category}`);
-        setEditingTransaction(null);
-        setAmount("0"); setCategory(""); setNote(""); setSelectedDate(toLocalDateStr(new Date()));
-        fetchData();
-      } else showToast(error.message, "error");
-    } else {
-      const { error } = await supabase.from('transactions').insert({
-        amount: numAmount, category, notes: note, date: txDate.toISOString(), user_id: user.id,
-      });
-      if (!error) {
-        if (navigator.vibrate) navigator.vibrate(50);
-        showToast(`Saved $${numAmount} for ${category}`);
-        setAmount("0"); setCategory(""); setNote(""); setSelectedDate(toLocalDateStr(new Date()));
-        fetchData();
-      } else showToast(error.message, "error");
-    }
+    setSaving(true);
+    const ok = await saveTransaction(
+      { amount: numAmount, category, notes: note, date: new Date(selectedDate + "T12:00:00").toISOString() },
+      editingTransaction?.id,
+    );
+    setSaving(false);
+    if (!ok) return;
+    showToast(`${editingTransaction ? "Updated" : "Saved"} ${formatAUD(numAmount)} \u00b7 ${category}`);
+    resetForm();
   };
 
-  const confirmDeleteTx = async () => {
-    if (!deleteTarget) return;
-    const id = deleteTarget.id;
-    setDeleteTarget(null);
-    await supabase.from('transactions').delete().eq('id', id);
-    if (editingTransaction?.id === id) handleCancel();
-    fetchData();
+  const handleDelete = (tx: Transaction) => {
+    if (editingTransaction?.id === tx.id) resetForm();
+    deleteTransaction(tx);
   };
+
+  const renderRow = (tx: Transaction, onPress: () => void) => (
+    <TransactionRow
+      key={tx.id}
+      title={tx.category}
+      subtitle={`${shortDate(tx.date)}${tx.notes ? ` \u2022 ${tx.notes}` : ""}`}
+      amount={formatAUD(tx.amount)}
+      onPress={onPress}
+      onDelete={() => handleDelete(tx)}
+      deleteLabel={`Delete ${tx.category} ${formatAUD(tx.amount)}`}
+    />
+  );
 
   return (
-    <main className="flex flex-col max-w-md mx-auto shadow-2xl relative min-h-[100dvh] pb-32 bg-surface">
-      <Toast message={toastMsg} variant={toastVariant} />
-      <TopHeader />
+    <main>
+      <ScreenHeader title={editingTransaction ? "Edit expense" : "Add expense"} />
 
-      {editingTransaction && (
-        <div className="mx-4 mt-2 mb-1 px-4 py-2.5 bg-surface-inset border border-line-default rounded-xl flex items-center gap-2 text-sm text-fg-secondary z-20">
-          <PenLine size={14} className="shrink-0" />
-          <span>Editing</span>
-          <span className="font-semibold text-fg-base truncate">{editingTransaction.category}</span>
-        </div>
-      )}
-
-      <div className="flex flex-col items-center justify-center px-6 py-6 bg-surface-card rounded-b-3xl shadow-sm z-10 pt-6 -mt-[env(safe-area-inset-top)]">
-        <h1 className="text-6xl font-light text-fg-base tracking-tighter mb-4">${amount}</h1>
-        <div className="flex space-x-3 mb-4 w-full justify-center">
-          <div className="relative flex items-center space-x-1.5 bg-surface-inset px-4 py-2 rounded-full text-sm font-medium text-fg-secondary">
-            <Calendar size={16} /><span>{chipLabel}</span>
-            <input
-              type="date"
-              value={selectedDate}
-              min={minDateStr}
-              max={todayStr}
-              onChange={(e) => { if (e.target.value) setSelectedDate(e.target.value); }}
-              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-            />
-          </div>
+      <div className="mx-4 mt-2 flex flex-col items-center justify-center rounded-2xl bg-surface-card px-6 py-6 shadow-sm">
+        <p className="mb-4 text-6xl font-light tracking-tighter text-fg-base">${amount}</p>
+        <div className="mb-4 flex w-full justify-center space-x-3">
+          <DateChip value={selectedDate} onChange={setSelectedDate} />
           <div className="flex items-center space-x-1.5 bg-surface-inset px-4 py-2 rounded-full text-sm font-medium text-fg-secondary focus-within:ring-2 focus-within:ring-focus-ring">
-            <PenLine size={16} /><input type="text" placeholder="Note..." value={note} onChange={(e) => setNote(e.target.value)} className="bg-transparent outline-none w-20 focus:w-32 transition-all text-fg-base" />
+            <PenLine size={16} /><input type="text" aria-label="Note" placeholder="Note..." value={note} onChange={(e) => setNote(e.target.value)} className="bg-transparent outline-none w-20 focus:w-32 transition-all text-fg-base" />
           </div>
         </div>
         <p className="text-fg-muted font-medium text-sm h-5">{category ? <span className="text-fg-base bg-surface-inset px-3 py-1 rounded-md">{category}</span> : "Select category"}</p>
@@ -165,144 +140,101 @@ export default function EntryScreen({
 
       {/* Pinned category row */}
       <div className="flex items-center gap-2 py-3 px-4 min-h-[60px]">
-        {loadingCats ? (
+        {loading ? (
           <Loader2 className="animate-spin text-fg-muted mx-auto" />
         ) : pinnedCategories.length === 0 ? (
           <>
             <span className="text-xs text-fg-muted flex-1 leading-tight">Pin categories in Settings for quick access</span>
             <button
+              type="button"
               onClick={() => setIsPickerOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-sm font-semibold bg-surface-card text-fg-secondary border border-line-default shrink-0 active:bg-surface-inset"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-sm font-semibold bg-surface-card text-fg-secondary border border-line-default shrink-0 active:bg-pressed"
             >
-              <LayoutGrid size={15} />
+              <LayoutGrid size={16} />
               <span>All</span>
             </button>
           </>
         ) : (
           <>
-            {pinnedCategories.map((cat) => {
-              const label = getCategorySubLabel(cat.name);
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setCategory(cat.name)}
-                  className={`whitespace-nowrap px-3 py-2 rounded-2xl text-sm font-semibold transition-all active:scale-[0.97] ${
-                    category === cat.name
-                      ? "bg-action text-fg-on-action shadow-md"
-                      : "bg-surface-card text-fg-secondary border border-line-default active:bg-surface-inset"
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-            <button
+            {pinnedCategories.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setCategory(cat.name)}
+                aria-pressed={category === cat.name}
+                className={`whitespace-nowrap px-3 py-2 rounded-2xl text-sm font-semibold transition-all active:scale-[0.97] ${
+                  category === cat.name
+                    ? "bg-action text-fg-on-action shadow-md"
+                    : "bg-surface-card text-fg-secondary border border-line-default active:bg-pressed"
+                }`}
+              >
+                {getCategorySubLabel(cat.name)}
+              </button>
+            ))}
+            <IconButton
+              label="All categories"
               onClick={() => setIsPickerOpen(true)}
-              className="flex items-center justify-center p-2.5 rounded-2xl bg-surface-inset text-fg-secondary shrink-0 ml-auto active:bg-surface-card"
-              aria-label="All categories"
+              className="ml-auto bg-surface-inset text-fg-secondary"
             >
               <LayoutGrid size={16} />
-            </button>
+            </IconButton>
           </>
         )}
       </div>
 
       <div className="grid grid-cols-3 gap-2 px-6 pb-4">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-          <button key={num} onClick={() => handlePress(num.toString())} className="flex items-center justify-center bg-surface-card text-3xl font-normal text-fg-base rounded-2xl shadow-sm h-[64px] active:bg-gray-200 transition-colors">{num}</button>
+          <button key={num} type="button" onClick={() => handlePress(num.toString())} className="flex items-center justify-center bg-surface-card text-3xl font-normal text-fg-base rounded-2xl shadow-sm h-[64px] active:bg-gray-200 transition-colors">{num}</button>
         ))}
-        <button onClick={() => handlePress(".")} className="flex items-center justify-center bg-surface-card text-3xl font-normal text-fg-base rounded-2xl shadow-sm h-[64px] active:bg-gray-200 transition-colors">.</button>
-        <button onClick={() => handlePress("0")} className="flex items-center justify-center bg-surface-card text-3xl font-normal text-fg-base rounded-2xl shadow-sm h-[64px] active:bg-gray-200 transition-colors">0</button>
-        <button onClick={handleDelete} className="flex items-center justify-center bg-surface-inset text-fg-secondary rounded-2xl shadow-sm h-[64px] active:bg-gray-300 transition-colors"><Delete size={24} /></button>
+        <button type="button" aria-label="Decimal point" onClick={() => handlePress(".")} className="flex items-center justify-center bg-surface-card text-3xl font-normal text-fg-base rounded-2xl shadow-sm h-[64px] active:bg-gray-200 transition-colors">.</button>
+        <button type="button" onClick={() => handlePress("0")} className="flex items-center justify-center bg-surface-card text-3xl font-normal text-fg-base rounded-2xl shadow-sm h-[64px] active:bg-gray-200 transition-colors">0</button>
+        <button type="button" aria-label="Backspace" onClick={handleBackspace} className="flex items-center justify-center bg-surface-inset text-fg-secondary rounded-2xl shadow-sm h-[64px] active:bg-gray-300 transition-colors"><Delete size={24} /></button>
       </div>
 
       <div className="px-6 pb-6">
-        {editingTransaction ? (
-          <div className="flex gap-3">
-            <button onClick={handleCancel} className="flex-1 bg-surface-inset text-fg-secondary py-4 rounded-2xl text-lg font-bold shadow-sm active:scale-[0.98] border border-line-default">Cancel</button>
-            <button onClick={handleSave} className="flex-[2] bg-action text-fg-on-action py-4 rounded-2xl text-lg font-bold shadow-lg active:scale-[0.98]">Update Entry</button>
-          </div>
-        ) : (
-          <button onClick={handleSave} className="w-full bg-action text-fg-on-action py-4 rounded-2xl text-lg font-bold shadow-lg active:scale-[0.98]">Save Entry</button>
-        )}
+        <div className="flex gap-3">
+          {editingTransaction && (
+            <button type="button" onClick={resetForm} className="flex-1 bg-surface-inset text-fg-secondary py-4 rounded-2xl text-lg font-bold shadow-sm active:scale-[0.98] border border-line-default">Cancel</button>
+          )}
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="flex flex-[2] items-center justify-center bg-action text-fg-on-action py-4 rounded-2xl text-lg font-bold shadow-lg active:scale-[0.98] disabled:opacity-70"
+          >
+            {saving ? <Loader2 size={24} className="animate-spin" /> : editingTransaction ? "Update Entry" : "Save Entry"}
+          </button>
+        </div>
       </div>
 
-      <div className="px-6">
-        <h3 className="text-sm font-semibold text-fg-muted mb-3 uppercase tracking-wider">Recent Activity</h3>
+      <section className="px-6">
+        <h2 className="text-sm font-semibold text-fg-muted mb-3 uppercase tracking-wider">Recent Activity</h2>
         <div className="space-y-3">
-          {recentTx.length === 0 ? <p className="text-fg-muted text-sm italic">No entries.</p> : recentTx.map((tx) => (
-            <div key={tx.id} className="flex items-stretch bg-surface-card rounded-2xl shadow-sm border border-line-subtle overflow-hidden">
-              <button
-                onClick={() => startEditing(tx)}
-                className="flex flex-1 justify-between items-center p-4 active:bg-surface-inset text-left"
-              >
-                <div className="flex flex-col">
-                  <span className="font-semibold text-fg-base">{tx.category}</span>
-                  <span className="text-xs text-fg-secondary">{new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}{tx.notes && ` • ${tx.notes}`}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-fg-base">${tx.amount.toFixed(2)}</span>
-                  <ChevronRight size={14} className="text-fg-muted" />
-                </div>
-              </button>
-              <button onClick={() => setDeleteTarget(tx)} className="px-4 text-delete-icon hover:text-red-500 border-l border-line-subtle">
-                <Trash2 size={18} />
-              </button>
-            </div>
-          ))}
-          {recentTx.length > 0 && <button onClick={() => setIsModalOpen(true)} className="w-full text-center py-3 text-sm font-semibold text-fg-muted hover:text-fg-base">View all month activity</button>}
+          {recentTx.length === 0
+            ? <EmptyState title="No expenses yet" hint="Enter an amount, pick a category and tap Save." />
+            : recentTx.map((tx) => renderRow(tx, () => startEditing(tx)))}
+          {recentTx.length > 0 && (
+            <button type="button" onClick={() => setIsMonthOpen(true)} className="w-full min-h-11 text-center text-sm font-semibold text-fg-secondary">
+              View all this month
+            </button>
+          )}
         </div>
-      </div>
+      </section>
 
-      {/* Category picker bottom sheet */}
-      {isPickerOpen && (
-        <CategoryPicker
-          categories={categories}
-          onSelect={setCategory}
-          onClose={() => setIsPickerOpen(false)}
-        />
-      )}
-
-      {/* This Month modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[100] bg-surface-overlay flex flex-col pt-[env(safe-area-inset-top)] animate-in slide-in-from-bottom-full duration-300">
-          <header className="flex justify-between items-center px-6 py-4 bg-surface-card border-b shadow-sm">
-            <button onClick={() => setIsModalOpen(false)}><ChevronLeft size={24} className="text-fg-muted" /></button>
-            <h2 className="font-bold text-fg-base text-lg">This Month</h2>
-            <div className="w-8" />
-          </header>
-          <div className="flex-1 overflow-y-auto p-6 space-y-3 pb-32">
-            {allMonthTx.map((tx) => (
-              <div key={tx.id} className="flex items-stretch bg-surface-card rounded-2xl shadow-sm border border-line-subtle overflow-hidden">
-                <button
-                  onClick={() => { setIsModalOpen(false); startEditing(tx); }}
-                  className="flex flex-1 justify-between items-center p-4 active:bg-surface-inset text-left"
-                >
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-fg-base">{tx.category}</span>
-                    <span className="text-xs text-fg-secondary">{new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}{tx.notes && ` • ${tx.notes}`}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-fg-base">${tx.amount.toFixed(2)}</span>
-                    <ChevronRight size={14} className="text-fg-muted" />
-                  </div>
-                </button>
-                <button onClick={() => setDeleteTarget(tx)} className="px-4 text-delete-icon hover:text-red-500 border-l border-line-subtle">
-                  <Trash2 size={18} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <ConfirmDialog
-        open={deleteTarget !== null}
-        title="Delete this transaction?"
-        message={deleteTarget ? `${deleteTarget.category} - $${deleteTarget.amount.toFixed(2)}` : undefined}
-        onConfirm={confirmDeleteTx}
-        onCancel={() => setDeleteTarget(null)}
+      <CategoryPicker
+        open={isPickerOpen}
+        categories={categories}
+        onSelect={setCategory}
+        onClose={() => setIsPickerOpen(false)}
       />
+
+      <Sheet open={isMonthOpen} onClose={() => setIsMonthOpen(false)} title="This month" className="h-[85dvh]">
+        <div className="flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 pb-6">
+          {allMonthTx.length === 0
+            ? <EmptyState title="Nothing logged this month" />
+            : allMonthTx.map((tx) => renderRow(tx, () => { setIsMonthOpen(false); startEditing(tx); }))}
+        </div>
+      </Sheet>
     </main>
   );
 }

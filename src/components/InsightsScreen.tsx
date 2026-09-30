@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -15,25 +15,29 @@ import {
   Bar,
   CartesianGrid,
 } from 'recharts';
-import TopHeader from "./TopHeader";
+import ScreenHeader from "./ScreenHeader";
+import Sheet from "./Sheet";
+import IconButton from "./IconButton";
+import EmptyState from "./EmptyState";
 import { computeMonthData, computeHistoricalData } from "../lib/insights";
 import { INSIGHT_COLORS } from "../lib/constants";
 import { getCategoryGroup, getCategorySubLabel } from "@/lib/categoryGroups";
-import type { AppUser, Budget, Income, Transaction } from "@/lib/types";
+import type { Budget, Income, Transaction } from "@/lib/types";
 
 export default function InsightsScreen({
   budgets,
   income,
   transactions,
 }: {
-  user: AppUser;
   budgets: Budget[];
   income: Income[];
   transactions: Transaction[];
 }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  // Kept after closing so the sheet's content survives its exit animation.
   const [drillCategory, setDrillCategory] = useState<string | null>(null);
+  const [drillOpen, setDrillOpen] = useState(false);
 
   const currentMonthData = useMemo(
     () => computeMonthData(selectedDate, transactions, income, budgets),
@@ -70,21 +74,21 @@ export default function InsightsScreen({
   const yDomainMax = (Math.max(paceData.budgetTotal, lastActual?.cumulative ?? 0) * 1.1) || 100;
 
   return (
-    <main className="flex flex-col max-w-md mx-auto shadow-2xl relative min-h-[100dvh] pb-32 bg-surface pt-[env(safe-area-inset-top)]">
-      <TopHeader />
-      <div className="pt-6 px-4 space-y-4">
+    <main>
+      <ScreenHeader title="Insights" />
+      <div className="pt-2 px-4 space-y-4">
 
         {/* SECTION 1: Month navigator */}
         <div className="flex items-center justify-between bg-surface-card border border-line-default rounded-full px-2 py-1.5">
-          <button onClick={() => moveMonth(-1)} className="p-2 text-fg-muted hover:text-fg-base">
+          <IconButton label="Previous month" onClick={() => moveMonth(-1)} className="rounded-full text-fg-muted">
             <ChevronLeft size={18} />
-          </button>
+          </IconButton>
           <span suppressHydrationWarning className="text-sm font-semibold text-fg-base">
             {selectedDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
           </span>
-          <button onClick={() => moveMonth(1)} className="p-2 text-fg-muted hover:text-fg-base">
+          <IconButton label="Next month" onClick={() => moveMonth(1)} className="rounded-full text-fg-muted">
             <ChevronRight size={18} />
-          </button>
+          </IconButton>
         </div>
 
         {/* SECTION 2: Summary cards */}
@@ -180,9 +184,7 @@ export default function InsightsScreen({
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="h-48 flex items-center justify-center text-fg-muted text-sm italic">
-              No spending data
-            </div>
+            <EmptyState title="No spending this month" className="flex h-48 flex-col justify-center" />
           )}
         </div>
 
@@ -207,6 +209,7 @@ export default function InsightsScreen({
                       className="flex items-center justify-between cursor-pointer"
                       onClick={() => {
                         setDrillCategory(item.name);
+                        setDrillOpen(true);
                         if (hasSubs) setExpandedGroups(p => ({ ...p, [item.name]: !p[item.name] }));
                       }}
                     >
@@ -268,7 +271,7 @@ export default function InsightsScreen({
               })}
             </div>
           ) : (
-            <p className="text-fg-muted text-sm italic text-center py-4">No data for this month.</p>
+            <EmptyState title="No spending this month" hint="Expenses you log will be grouped here by category." />
           )}
         </div>
 
@@ -324,78 +327,53 @@ export default function InsightsScreen({
 
       </div>
 
-      {/* CATEGORY DRILL-DOWN PANEL */}
-      {drillCategory !== null && (() => {
+      {/* Category drill-down */}
+      {(() => {
         const drillItem = chartData.find(item => item.name === drillCategory);
         const drillTotal = drillItem?.value ?? 0;
         const drillBudgetLimit = drillItem?.budgetLimit ?? null;
         const isGroupCategory = drillItem ? Object.keys(drillItem.subs).length > 1 : false;
         return (
-          <div className="fixed inset-0 z-[110] flex flex-col justify-end">
-            <div
-              className="absolute inset-0 bg-black/40"
-              onClick={() => setDrillCategory(null)}
-            />
-            <div className="relative bg-surface rounded-t-3xl max-h-[65vh] flex flex-col animate-in slide-in-from-bottom-full duration-300 shadow-2xl">
-              {/* Panel header */}
-              <div className="flex items-start justify-between px-5 pt-5 pb-3 border-b border-line-subtle">
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-lg font-bold text-fg-base truncate">{drillCategory}</h2>
-                  {drillBudgetLimit !== null && (
-                    <p className="text-xs text-fg-secondary mt-0.5">
-                      spent ${drillTotal.toFixed(2)} of ${drillBudgetLimit} budget
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 ml-3 shrink-0">
-                  <span className="text-base font-semibold text-fg-base">${drillTotal.toFixed(2)}</span>
-                  <button
-                    onClick={() => setDrillCategory(null)}
-                    className="p-1.5 text-fg-muted hover:text-fg-base"
+          <Sheet
+            open={drillOpen}
+            onClose={() => setDrillOpen(false)}
+            title={drillCategory ?? ""}
+            description={drillBudgetLimit !== null ? `spent $${drillTotal.toFixed(2)} of $${drillBudgetLimit} budget` : undefined}
+            trailing={<span className="pt-0.5 text-base font-semibold text-fg-base">${drillTotal.toFixed(2)}</span>}
+          >
+            <div className="flex-1 space-y-2 overflow-y-auto overscroll-contain border-t border-line-subtle px-4 py-3">
+              {drillTransactions.length > 0 ? drillTransactions.map(tx => {
+                const txDate = new Date(tx.date);
+                const dateLabel = txDate.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+                const showCategory = isGroupCategory && tx.category !== drillCategory;
+                const subLabel = showCategory ? getCategorySubLabel(tx.category) : null;
+                return (
+                  <div
+                    key={tx.id}
+                    className="bg-surface-card rounded-xl border border-line-subtle p-3 flex items-center gap-3"
                   >
-                    <X size={20} />
-                  </button>
-                </div>
-              </div>
-              {/* Transaction list */}
-              <div className="overflow-y-auto flex-1 px-4 py-3 space-y-2 pb-[env(safe-area-inset-bottom)]">
-                {drillTransactions.length > 0 ? drillTransactions.map(tx => {
-                  const txDate = new Date(tx.date);
-                  const dateLabel = txDate.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-                  const showCategory = isGroupCategory && tx.category !== drillCategory;
-                  const subLabel = showCategory ? getCategorySubLabel(tx.category) : null;
-                  return (
-                    <div
-                      key={tx.id}
-                      className="bg-surface-card rounded-xl border border-line-subtle p-3 flex items-center gap-3"
-                    >
-                      <span className="text-xs text-fg-muted w-12 shrink-0">{dateLabel}</span>
-                      <div className="flex-1 min-w-0">
-                        {subLabel && (
-                          <p className="text-xs font-medium text-fg-mid truncate">{subLabel}</p>
-                        )}
-                        {tx.notes && (
-                          <p className="text-xs text-fg-secondary truncate">{tx.notes}</p>
-                        )}
-                        {!subLabel && !tx.notes && (
-                          <p className="text-xs text-fg-muted italic">No notes</p>
-                        )}
-                      </div>
-                      <span className="text-sm font-semibold text-fg-base shrink-0">${tx.amount.toFixed(2)}</span>
+                    <span className="text-xs text-fg-muted w-12 shrink-0">{dateLabel}</span>
+                    <div className="flex-1 min-w-0">
+                      {subLabel && (
+                        <p className="text-xs font-medium text-fg-mid truncate">{subLabel}</p>
+                      )}
+                      {tx.notes && (
+                        <p className="text-xs text-fg-secondary truncate">{tx.notes}</p>
+                      )}
+                      {!subLabel && !tx.notes && (
+                        <p className="text-xs text-fg-muted">No note</p>
+                      )}
                     </div>
-                  );
-                }) : (
-                  <p className="text-center text-fg-muted text-sm italic py-8">
-                    No transactions for {drillCategory} this month.
-                  </p>
-                )}
-              </div>
+                    <span className="text-sm font-semibold text-fg-base shrink-0">${tx.amount.toFixed(2)}</span>
+                  </div>
+                );
+              }) : (
+                <EmptyState title={`No ${drillCategory} transactions this month`} />
+              )}
             </div>
-          </div>
+          </Sheet>
         );
       })()}
-
-      
     </main>
   );
 }
