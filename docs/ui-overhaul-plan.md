@@ -28,7 +28,7 @@ in the Light, Dark and Warm themes.
 
 ## Phase 1: Foundation (tokens, globals, lib, docs) - done
 
-The two items still unchecked below are rules written down in Phase 1. They get applied to each file as Phases 2–3 touch it.
+Two items below are rules written down in Phase 1 and applied to each file as Phases 2–3 touched it. Both are now applied everywhere.
 
 Touches: `src/app/globals.css`, `src/app/layout.tsx`, `src/app/manifest.ts`,
 `src/hooks/useTheme.ts`, `src/lib/*` (plus new `src/lib/format.ts` and
@@ -39,7 +39,7 @@ Later phases use what it adds.
 ### Typography
 - [x] Remove `font-family: Arial, Helvetica` from `body` so Geist actually renders
 - [x] Drop the unused `Geist_Mono` import and the `--font-mono` token
-- [ ] Set a minimum text size: nothing below 12px (`text-xs`). Replace the 12 uses of `text-[10px]`/`text-[11px]` as each file is touched in Phases 2–3.
+- [x] Set a minimum text size: nothing below 12px (`text-xs`). Replace the 12 uses of `text-[10px]`/`text-[11px]` as each file is touched in Phases 2–3.
 
 ### Color tokens and contrast (WCAG AA 4.5:1 for text)
 - [x] Darken `--fg-muted` in all three themes (currently 2.43 light, 3.04 dark, 2.63 warm)
@@ -52,7 +52,7 @@ Later phases use what it adds.
 - [x] Map the new tokens in the `@theme inline` block
 
 ### Radius, shadow and motion scale
-- [ ] Standardise on two radii (`rounded-xl` for controls, `rounded-2xl` for cards and sheets) and two shadows (`shadow-sm` for cards, `shadow-lg` for sheets and toasts). Write the rule as a short comment in `globals.css` and apply it as files are touched.
+- [x] Standardise on two radii (`rounded-xl` for controls, `rounded-2xl` for cards and sheets) and two shadows (`shadow-sm` for cards, `shadow-lg` for sheets and toasts). Write the rule as a short comment in `globals.css` and apply it as files are touched.
 - [x] Add keyframes for sheet enter/exit and toast enter (D1)
 - [x] Add a `prefers-reduced-motion` block that disables these animations
 - [x] Remove the unused `.no-scrollbar` utility
@@ -137,7 +137,7 @@ It also makes small, mechanical edits to each screen's `<main>` wrapper.
 
 ---
 
-## Phase 3: Screens
+## Phase 3: Screens - done
 
 Touches one screen at a time, using the Phase 1–2 pieces. Each screen's
 checklist also includes: `formatAUD` + `tabular-nums` on every amount,
@@ -145,63 +145,70 @@ checklist also includes: `formatAUD` + `tabular-nums` on every amount,
 comments.
 
 ### EntryScreen
-- [ ] Keypad presses use the `--pressed` token (the pressed state is currently invisible in dark mode at 1.18:1)
+- [x] Keypad presses use the `--pressed` token (the pressed state is currently invisible in dark mode at 1.18:1)
 - [x] Guard Save/Update against double taps: disable while saving and show a spinner *(done in Phase 2)*
 - [x] Toast copy uses `formatAUD` ("Saved $12.50 · Coffee", not "$12.5") *(done in Phase 2)*
-- [ ] Make the note field a fixed, usable width instead of animating from `w-20` to `w-32`
-- [ ] Show the selected category's short name (sub-label) in the chip, to match the pinned buttons
-- [ ] Recent Activity: order by `created_at` so a just-saved backdated entry still appears, or show it briefly at the top
-- [ ] "This Month" sheet:
+- [x] Make the note field a fixed, usable width instead of animating from `w-20` to `w-32`
+- [x] Show the selected category's short name (sub-label) in the chip, to match the pinned buttons
+- [x] Recent Activity: order by `created_at` so a just-saved backdated entry still appears, or show it briefly at the top
+- [x] "This Month" sheet:
   - [x] Use `Sheet` *(done in Phase 2)*
-  - [ ] Use tokenized borders (the bare `border-b` currently draws in the text color)
-  - [ ] Show the month total in the header
+  - [x] Use tokenized borders (the bare `border-b` currently draws in the text color). The header with the bare border was removed when the list moved into `Sheet`.
+  - [x] Show the month total in the header
   - [x] Add an empty state *(done in Phase 2)*
 
 ### IncomeScreen
-- [ ] Add Income button uses the green fill with `--on-positive` text; add visible disabled/loading styling
+- [x] Add Income button uses the green fill with `--on-positive` text; add visible disabled/loading styling
 - [x] Income amounts use `--positive-fg` *(done in Phase 2)*
 - [x] Add an empty state for Income History (currently it shows nothing) *(done in Phase 2)*
-- [ ] Use `DateChip`, and undo-delete via `IconButton`
+- [x] Use `DateChip`, and undo-delete via `IconButton`
 
 ### InsightsScreen
-- [ ] Remove the glow blobs and the dark navy cards in light mode. Summary cards become normal `surface-card` cards, with the green/red carried by the numbers only.
-- [ ] Remove the `SECTION n:` / "Increased height…" / "Subtle glow" comments
-- [ ] Fix the warning pill (green background with amber text); use `--warning` / `--warning-tint`
-- [ ] Split the row interaction: the row (a real `<button>`) opens the drill-down; a separate chevron `IconButton` with `aria-expanded` expands sub-categories
-- [ ] Pace chart (D4): measure against the budget total when set, otherwise income
-  - [ ] Add a small legend or label for the dashed line
-  - [ ] Don't show "Over pace" when there is no baseline
-- [ ] Month switcher moves into the header `trailing` slot, with 44px arrows and aria-labels; disable moving past the current month
-- [ ] Format budget limits and the chart dot label with `formatAUD`; use the compact form where space is tight
-- [ ] Use a readable "Spent" bar color (not `fg-muted`, which reads as disabled); add a tooltip that also works on tap
+- [x] Remove the glow blobs and the dark navy cards in light mode. Summary cards become normal `surface-card` cards, with the green/red carried by the numbers only.
+- [x] Remove the `SECTION n:` / "Increased height…" / "Subtle glow" comments
+- [x] Fix the warning pill (green background with amber text); use `--warning` / `--warning-tint`
+- [x] Split the row interaction: the row (a real `<button>`) opens the drill-down; a separate chevron `IconButton` with `aria-expanded` expands sub-categories
+- [x] Pace chart (D4): measure against the budget total when set, otherwise income. Item budgets aren't double-counted when their group also has one (`totalBudget` in `lib/insights.ts`).
+  - [x] Add a small legend or label for the dashed line
+  - [x] Don't show "Over pace" when there is no baseline
+- [x] Month switcher moves into the header `trailing` slot, with 44px arrows and aria-labels; disable moving past the current month
+- [x] Format budget limits and the chart dot label with `formatAUD`; use the compact form where space is tight
+- [x] Use a readable "Spent" bar color (not `fg-muted`, which reads as disabled); add a tooltip that also works on tap. The bar now uses `fg-mid`. Tap support relies on Recharts' built-in touch handling and hasn't been checked on a device.
 
 ### SettingsScreen
-- [ ] Merge "Pinned Categories" and "Manage Categories & Budgets" into one list: each row shows the name, a pin toggle (`aria-pressed`), a budget input and delete
-- [ ] At 4 pins, disable unpinned toggles and show why, instead of silently ignoring the tap
-- [ ] `BudgetInput`:
-  - [ ] Use `type="text" inputMode="decimal"`
-  - [ ] Add a visible label per row for screen readers
-  - [ ] Show a brief inline "Saved" confirmation when the field loses focus
-- [ ] Theme switcher: `role="radiogroup"` / `aria-checked`; 12px labels
-- [ ] Delete category keeps the confirmation sheet (D3), now built on `Sheet`
+- [x] Merge "Pinned Categories" and "Manage Categories & Budgets" into one list: each row shows the name, a pin toggle (`aria-pressed`), a budget input and delete
+- [x] At 4 pins, disable unpinned toggles and show why, instead of silently ignoring the tap
+- [x] `BudgetInput`:
+  - [x] Use `type="text" inputMode="decimal"`
+  - [x] Add a label per row for screen readers (an `aria-label` naming the category, because the category name is already visible in the row)
+  - [x] Show a brief inline "Saved" confirmation when the field loses focus
+- [x] Theme switcher: `role="radiogroup"` / `aria-checked`; 12px labels
+- [x] Delete category keeps the confirmation sheet (D3), now built on `Sheet`
 
 ### LoginScreen
-- [ ] Wrap the fields in a `<form>` so Enter submits
-- [ ] Add visible `<label>`s, `autoComplete="email"` / `"current-password"`, and `type="email"` keyboard hints
-- [ ] Show inline field errors instead of only a toast
-- [ ] Make Sign In the clear primary action; make Create Account a quieter text button
-- [ ] Remove the desktop-only `shadow-2xl` / `max-w-md` card chrome
+- [x] Wrap the fields in a `<form>` so Enter submits
+- [x] Add visible `<label>`s, `autoComplete="email"` / `"current-password"`, and `type="email"` keyboard hints
+- [x] Show inline field errors instead of only a toast
+- [x] Make Sign In the clear primary action; make Create Account a quieter text button
+- [x] Remove the desktop-only `shadow-2xl` / `max-w-md` card chrome
 
 ### App launch
-- [ ] Replace the 48px full-screen spinner in `page.tsx` with a surface-colored shell (header plus tab bar placeholders) so launch doesn't flash
+- [x] Replace the 48px full-screen spinner in `page.tsx` with a surface-colored shell (header plus tab bar placeholders) so launch doesn't flash
 
 ---
 
 ## Verification per phase
-- [ ] `npm run build` and `npm run lint` pass
+
+The on-device checks below are still open. They need a real iPhone and a signed-in account.
+- [x] `npm run build` and `npm run lint` pass (Phases 1–3)
 - [ ] On an iPhone home-screen install, in Light, Dark and Warm:
   - [ ] No double gaps at the top; nothing hidden under the notch or home indicator
   - [ ] Every tap gives visible feedback; no stuck hover colors
 - [ ] With VoiceOver on: every icon button announces a name; sheets trap focus and close with the close button
 - [ ] With Reduce Motion on: sheets appear without sliding
 - [ ] Amounts over $1,000 show separators everywhere
+
+## Phase 3 cleanup
+- [x] Removed six unused color tokens (`surface-feature`, `line-feature`, `fg-on-feature`, `fg-on-feature-dim`, `surface-overlay`, `positive-tint`)
+- [x] Removed the remaining `hover:`, `transition-all`, `active:scale` and hardcoded gray/red classes
+- [x] Nested controls inside a `rounded-xl` container, such as the theme switcher buttons, use `rounded-lg` so the curves stay concentric

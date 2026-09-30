@@ -212,24 +212,33 @@ export function useAppData(userId: string) {
     setCategories((rows) => rows.filter((r) => r.id !== cat.id));
   };
 
-  /** Sets a category's monthly limit; an empty value removes it. */
-  const setBudget = async (category: string, value: string): Promise<void> => {
+  /** Sets a category's monthly limit; an empty value removes it. Returns false on failure. */
+  const setBudget = async (category: string, value: string): Promise<boolean> => {
     if (!value.trim()) {
       const { error } = await supabase.from('budgets').delete().match({ user_id: userId, category });
-      if (error) showToast(error.message, "error");
-      else setBudgets((rows) => rows.filter((b) => b.category !== category));
-      return;
+      if (error) {
+        showToast(error.message, "error");
+        return false;
+      }
+      setBudgets((rows) => rows.filter((b) => b.category !== category));
+      return true;
+    }
+    const limit = Number(value);
+    if (!Number.isFinite(limit) || limit < 0) {
+      showToast("Enter a budget as a number, like 250.", "error");
+      return false;
     }
     const { data, error } = await supabase
       .from('budgets')
-      .upsert({ user_id: userId, category, limit_amount: parseFloat(value) }, { onConflict: 'user_id, category' })
+      .upsert({ user_id: userId, category, limit_amount: limit }, { onConflict: 'user_id, category' })
       .select()
       .single();
     if (error || !data) {
       showToast(error?.message ?? "Couldn't save budget.", "error");
-      return;
+      return false;
     }
     setBudgets((rows) => [...rows.filter((b) => b.category !== category), data as Budget]);
+    return true;
   };
 
   return {

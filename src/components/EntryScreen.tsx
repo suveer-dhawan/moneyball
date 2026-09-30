@@ -16,6 +16,8 @@ import { toLocalDateStr } from "@/lib/dates";
 import { formatAUD } from "@/lib/format";
 import type { Category, Transaction } from "@/lib/types";
 
+const KEY = "flex h-16 items-center justify-center rounded-xl bg-surface-card text-3xl font-normal text-fg-base shadow-sm transition-colors active:bg-pressed";
+
 const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
@@ -49,13 +51,18 @@ export default function EntryScreen({
     [pinnedNames, categories]
   );
 
-  const recentTx = useMemo(() => transactions.slice(0, 5), [transactions]);
+  // Most recently logged first, so a backdated entry still shows up right after saving.
+  const recentTx = useMemo(
+    () => [...transactions].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 5),
+    [transactions]
+  );
 
   const allMonthTx = useMemo(() => {
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
     return transactions.filter(tx => new Date(tx.date) >= firstDay);
   }, [transactions]);
+  const monthTotal = allMonthTx.reduce((sum, tx) => sum + tx.amount, 0);
 
   const resetForm = () => {
     setEditingTransaction(null);
@@ -128,14 +135,19 @@ export default function EntryScreen({
       <ScreenHeader title={editingTransaction ? "Edit expense" : "Add expense"} />
 
       <div className="mx-4 mt-2 flex flex-col items-center justify-center rounded-2xl bg-surface-card px-6 py-6 shadow-sm">
-        <p className="mb-4 text-6xl font-light tracking-tighter text-fg-base">${amount}</p>
-        <div className="mb-4 flex w-full justify-center space-x-3">
+        <p className="mb-4 text-6xl font-light tracking-tighter text-fg-base tabular-nums">${amount}</p>
+        <div className="mb-4 flex w-full justify-center gap-3">
           <DateChip value={selectedDate} onChange={setSelectedDate} />
-          <div className="flex items-center space-x-1.5 bg-surface-inset px-4 py-2 rounded-full text-sm font-medium text-fg-secondary focus-within:ring-2 focus-within:ring-focus-ring">
-            <PenLine size={16} /><input type="text" aria-label="Note" placeholder="Note..." value={note} onChange={(e) => setNote(e.target.value)} className="bg-transparent outline-none w-20 focus:w-32 transition-all text-fg-base" />
-          </div>
+          <label className="flex min-w-0 max-w-44 flex-1 items-center gap-1.5 rounded-full bg-surface-inset px-4 py-2 text-sm font-medium text-fg-secondary focus-within:ring-2 focus-within:ring-focus-ring">
+            <PenLine size={16} className="shrink-0" />
+            <input type="text" aria-label="Note" placeholder="Add note" value={note} onChange={(e) => setNote(e.target.value)} className="w-full min-w-0 bg-transparent text-fg-base outline-none placeholder:text-fg-muted" />
+          </label>
         </div>
-        <p className="text-fg-muted font-medium text-sm h-5">{category ? <span className="text-fg-base bg-surface-inset px-3 py-1 rounded-md">{category}</span> : "Select category"}</p>
+        <p className="h-6 text-sm font-medium text-fg-muted">
+          {category
+            ? <span className="rounded-lg bg-surface-inset px-3 py-1 text-fg-base">{getCategorySubLabel(category)}</span>
+            : "Select a category"}
+        </p>
       </div>
 
       {/* Pinned category row */}
@@ -148,7 +160,7 @@ export default function EntryScreen({
             <button
               type="button"
               onClick={() => setIsPickerOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-sm font-semibold bg-surface-card text-fg-secondary border border-line-default shrink-0 active:bg-pressed"
+              className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl border border-line-default bg-surface-card px-3 text-sm font-semibold text-fg-secondary transition-colors active:bg-pressed"
             >
               <LayoutGrid size={16} />
               <span>All</span>
@@ -162,10 +174,10 @@ export default function EntryScreen({
                 type="button"
                 onClick={() => setCategory(cat.name)}
                 aria-pressed={category === cat.name}
-                className={`whitespace-nowrap px-3 py-2 rounded-2xl text-sm font-semibold transition-all active:scale-[0.97] ${
+                className={`min-h-11 whitespace-nowrap rounded-xl px-3 text-sm font-semibold transition-colors ${
                   category === cat.name
-                    ? "bg-action text-fg-on-action shadow-md"
-                    : "bg-surface-card text-fg-secondary border border-line-default active:bg-pressed"
+                    ? "bg-action text-fg-on-action"
+                    : "border border-line-default bg-surface-card text-fg-secondary active:bg-pressed"
                 }`}
               >
                 {getCategorySubLabel(cat.name)}
@@ -184,23 +196,23 @@ export default function EntryScreen({
 
       <div className="grid grid-cols-3 gap-2 px-6 pb-4">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-          <button key={num} type="button" onClick={() => handlePress(num.toString())} className="flex items-center justify-center bg-surface-card text-3xl font-normal text-fg-base rounded-2xl shadow-sm h-[64px] active:bg-gray-200 transition-colors">{num}</button>
+          <button key={num} type="button" onClick={() => handlePress(num.toString())} className={KEY}>{num}</button>
         ))}
-        <button type="button" aria-label="Decimal point" onClick={() => handlePress(".")} className="flex items-center justify-center bg-surface-card text-3xl font-normal text-fg-base rounded-2xl shadow-sm h-[64px] active:bg-gray-200 transition-colors">.</button>
-        <button type="button" onClick={() => handlePress("0")} className="flex items-center justify-center bg-surface-card text-3xl font-normal text-fg-base rounded-2xl shadow-sm h-[64px] active:bg-gray-200 transition-colors">0</button>
-        <button type="button" aria-label="Backspace" onClick={handleBackspace} className="flex items-center justify-center bg-surface-inset text-fg-secondary rounded-2xl shadow-sm h-[64px] active:bg-gray-300 transition-colors"><Delete size={24} /></button>
+        <button type="button" aria-label="Decimal point" onClick={() => handlePress(".")} className={KEY}>.</button>
+        <button type="button" onClick={() => handlePress("0")} className={KEY}>0</button>
+        <button type="button" aria-label="Backspace" onClick={handleBackspace} className="flex h-16 items-center justify-center rounded-xl bg-surface-inset text-fg-secondary transition-colors active:bg-pressed"><Delete size={24} /></button>
       </div>
 
       <div className="px-6 pb-6">
         <div className="flex gap-3">
           {editingTransaction && (
-            <button type="button" onClick={resetForm} className="flex-1 bg-surface-inset text-fg-secondary py-4 rounded-2xl text-lg font-bold shadow-sm active:scale-[0.98] border border-line-default">Cancel</button>
+            <button type="button" onClick={resetForm} className="flex-1 rounded-xl border border-line-default bg-surface-inset py-4 text-lg font-bold text-fg-secondary transition-colors active:bg-pressed">Cancel</button>
           )}
           <button
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex flex-[2] items-center justify-center bg-action text-fg-on-action py-4 rounded-2xl text-lg font-bold shadow-lg active:scale-[0.98] disabled:opacity-70"
+            className="flex flex-[2] items-center justify-center rounded-xl bg-action py-4 text-lg font-bold text-fg-on-action shadow-sm transition-opacity active:opacity-80 disabled:opacity-70"
           >
             {saving ? <Loader2 size={24} className="animate-spin" /> : editingTransaction ? "Update Entry" : "Save Entry"}
           </button>
@@ -208,7 +220,7 @@ export default function EntryScreen({
       </div>
 
       <section className="px-6">
-        <h2 className="text-sm font-semibold text-fg-muted mb-3 uppercase tracking-wider">Recent Activity</h2>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-fg-muted">Recent activity</h2>
         <div className="space-y-3">
           {recentTx.length === 0
             ? <EmptyState title="No expenses yet" hint="Enter an amount, pick a category and tap Save." />
@@ -228,7 +240,13 @@ export default function EntryScreen({
         onClose={() => setIsPickerOpen(false)}
       />
 
-      <Sheet open={isMonthOpen} onClose={() => setIsMonthOpen(false)} title="This month" className="h-[85dvh]">
+      <Sheet
+        open={isMonthOpen}
+        onClose={() => setIsMonthOpen(false)}
+        title="This month"
+        trailing={<span className="pt-0.5 text-base font-semibold text-fg-base tabular-nums">{formatAUD(monthTotal)}</span>}
+        className="h-[85dvh]"
+      >
         <div className="flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 pb-6">
           {allMonthTx.length === 0
             ? <EmptyState title="Nothing logged this month" />

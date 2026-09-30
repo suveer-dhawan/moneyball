@@ -1,5 +1,5 @@
 import type { Transaction, Income, Budget } from "@/lib/types";
-import { getCategoryGroup, isSubCategoryOf } from "@/lib/categoryGroups";
+import { getCategoryGroup, hasCategoryGroup, isSubCategoryOf } from "@/lib/categoryGroups";
 
 export interface ChartItem {
   name: string;
@@ -14,14 +14,18 @@ export interface MonthData {
   totalSpent: number;
   totalIncome: number;
   netSavings: number;
+  /** Share of income saved, or null when no income was logged. */
+  savingsRate: number | null;
   chartData: ChartItem[];
   paceData: {
     actual: { day: number; cumulative: number }[];
-    budgetTotal: number;
+    /** Month-end target the pace line climbs to: total budgets, else income, else 0. */
+    baseline: number;
+    baselineKind: 'budget' | 'income' | null;
     daysInMonth: number;
     currentDay: number;
-    savingsRate: number;
-    onTrack: boolean;
+    /** null when there is no baseline to compare against. */
+    onTrack: boolean | null;
   };
 }
 
@@ -29,6 +33,17 @@ export interface HistoricalEntry {
   month: string;
   Spent: number;
   Income: number;
+}
+
+/**
+ * Sum of monthly limits. A limit on a group ("Groceries") covers its items, so
+ * item limits ("Groceries - Aldi") are only counted when their group has none.
+ */
+export function totalBudget(budgets: Budget[]): number {
+  const groupsWithLimit = new Set(budgets.filter(b => !hasCategoryGroup(b.category)).map(b => b.category));
+  return budgets
+    .filter(b => !(hasCategoryGroup(b.category) && groupsWithLimit.has(getCategoryGroup(b.category))))
+    .reduce((sum, b) => sum + b.limit_amount, 0);
 }
 
 export function computeMonthData(
@@ -107,22 +122,27 @@ export function computeMonthData(
     actual.push({ day, cumulative });
   }
 
-  const savingsRate = totalIncome > 0 ? ((totalIncome - totalSpent) / totalIncome) * 100 : 0;
+  const savingsRate = totalIncome > 0 ? ((totalIncome - totalSpent) / totalIncome) * 100 : null;
+
+  const budgetTotal = totalBudget(budgets);
+  const baselineKind = budgetTotal > 0 ? 'budget' : totalIncome > 0 ? 'income' : null;
+  const baseline = baselineKind === 'budget' ? budgetTotal : baselineKind === 'income' ? totalIncome : 0;
   const actualAtCurrentDay = actual.length > 0 ? actual[actual.length - 1].cumulative : 0;
-  const expectedPace = daysInMonth > 0 ? (totalIncome / daysInMonth) * currentDay : 0;
-  const onTrack = actualAtCurrentDay < expectedPace;
+  const expectedPace = (baseline / daysInMonth) * currentDay;
+  const onTrack = baselineKind === null ? null : actualAtCurrentDay <= expectedPace;
 
   return {
     totalSpent,
     totalIncome,
     netSavings,
+    savingsRate,
     chartData,
     paceData: {
       actual,
-      budgetTotal: totalIncome,
+      baseline,
+      baselineKind,
       daysInMonth,
       currentDay,
-      savingsRate,
       onTrack,
     },
   };

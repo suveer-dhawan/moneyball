@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 const KEY = "moneyball-pinned-cats";
-const MAX_PINS = 4;
+export const MAX_PINS = 4;
 
 export function usePinnedCategories() {
   const [pinnedNames, setPinnedNames] = useState<string[]>(() => {

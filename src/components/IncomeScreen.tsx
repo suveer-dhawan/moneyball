@@ -51,7 +51,7 @@ export default function IncomeScreen({
       <div className="pt-2 px-6">
         <div className="bg-surface-card p-6 rounded-2xl shadow-sm border border-line-subtle mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-fg-base">Log Paycheck</h2>
+            <h2 className="text-xl font-bold text-fg-base">Log income</h2>
             <DateChip value={selectedDate} onChange={setSelectedDate} />
           </div>
           <div className="space-y-4">
@@ -60,12 +60,12 @@ export default function IncomeScreen({
               <input type="text" inputMode="decimal" aria-label="Amount" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full pl-8 pr-4 py-3 bg-surface border border-line-default rounded-xl text-fg-base focus:outline-none focus:ring-2 focus:ring-focus-ring text-[16px]" />
             </div>
             <input type="text" aria-label="Source" placeholder="Source (Salary, Side Hustle)" value={source} onChange={(e) => setSource(e.target.value)} className="w-full px-4 py-3 bg-surface border border-line-default rounded-xl text-fg-base focus:outline-none focus:ring-2 focus:ring-focus-ring text-[16px]" />
-            <button type="button" onClick={handleSaveIncome} disabled={isAdding} className="w-full bg-positive text-white py-3.5 rounded-xl font-bold active:scale-[0.98] shadow-sm flex items-center justify-center">
+            <button type="button" onClick={handleSaveIncome} disabled={isAdding} aria-busy={isAdding} className="flex min-h-12 w-full items-center justify-center rounded-xl bg-positive py-3.5 font-bold text-on-positive shadow-sm transition-opacity active:opacity-80 disabled:opacity-60">
               {isAdding ? <Loader2 size={20} className="animate-spin" /> : <span>Add Income</span>}
             </button>
           </div>
         </div>
-        <h2 className="text-sm font-semibold text-fg-muted mb-3 uppercase tracking-wider">Income History</h2>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-fg-muted">Income history</h2>
         <div className="space-y-3">
           {income.length === 0 ? (
             <EmptyState title="No income logged yet" hint="Log a paycheck above to see savings in Insights." />

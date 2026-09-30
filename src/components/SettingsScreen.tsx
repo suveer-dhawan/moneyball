@@ -1,18 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Plus, X, Monitor, Sun, Moon, Leaf } from "lucide-react";
+import { Loader2, Plus, X, Pin, Monitor, Sun, Moon, Leaf } from "lucide-react";
 import { createClient } from "../lib/supabase";
 import ScreenHeader from "./ScreenHeader";
 import BudgetInput from "./BudgetInput";
 import ConfirmDialog from "./ConfirmDialog";
 import IconButton from "./IconButton";
+import { MAX_PINS } from "../hooks/usePinnedCategories";
 import { type ThemePreference } from "../hooks/useTheme";
 import type { AppUser, Category, Budget } from "@/lib/types";
 
 const supabase = createClient();
-
-const MAX_PINS = 4;
 
 const THEME_OPTIONS: { value: ThemePreference; label: string; Icon: React.ElementType }[] = [
   { value: "system", label: "Auto",  Icon: Monitor },
@@ -39,7 +38,7 @@ export default function SettingsScreen({
   budgets: Budget[];
   addCategory: (name: string) => Promise<boolean>;
   deleteCategory: (cat: Category) => Promise<void>;
-  setBudget: (category: string, value: string) => Promise<void>;
+  setBudget: (category: string, value: string) => Promise<boolean>;
   themePreference: ThemePreference;
   setThemePreference: (p: ThemePreference) => void;
   pinnedNames: string[];
@@ -52,9 +51,10 @@ export default function SettingsScreen({
 
   const handleLogout = async () => await supabase.auth.signOut();
 
-  const handleAddCategory = async () => {
+  const handleAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
     const name = newCatName.trim();
-    if (!name) return;
+    if (!name || isAdding) return;
     setIsAdding(true);
     if (await addCategory(name)) setNewCatName("");
     setIsAdding(false);
@@ -72,101 +72,108 @@ export default function SettingsScreen({
   return (
     <main>
       <ScreenHeader title="Settings" />
-      <div className="pt-2 px-6 space-y-4">
+      <div className="space-y-4 px-4 pb-6 pt-2">
 
-        {/* 1. Appearance */}
-        <div className="bg-surface-card p-6 rounded-3xl shadow-sm border border-line-default">
-          <h3 className="font-semibold text-fg-base mb-4">Appearance</h3>
-          <div className="flex rounded-2xl bg-surface-inset p-1 gap-1">
-            {THEME_OPTIONS.map(({ value, label, Icon }) => (
-              <button
-                key={value}
-                onClick={() => setThemePreference(value)}
-                className={`flex-1 flex flex-col items-center py-2.5 rounded-xl text-[11px] font-semibold transition-all ${
-                  themePreference === value
-                    ? "bg-surface-card text-fg-base shadow-sm"
-                    : "text-fg-muted"
-                }`}
-              >
-                <Icon size={15} className="mb-1" />
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 2. Pinned Categories */}
-        <div className="bg-surface-card p-6 rounded-3xl shadow-sm border border-line-default">
-          <div className="flex items-baseline justify-between mb-1">
-            <h3 className="font-semibold text-fg-base">Pinned Categories</h3>
-            {atLimit && (
-              <span className="text-xs font-semibold text-fg-muted">4/4</span>
-            )}
-          </div>
-          <p className="text-xs text-fg-muted mb-4">Choose up to 4 categories for quick access on the Entry screen</p>
-          <div className="grid grid-cols-2 gap-2">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => togglePin(cat.name)}
-                className={`px-3 py-2.5 rounded-2xl text-sm font-semibold text-left transition-all active:scale-[0.97] ${
-                  isPinned(cat.name)
-                    ? "bg-action text-fg-on-action shadow-sm"
-                    : "border border-line-default text-fg-secondary"
-                }`}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 3. Manage Categories & Budgets */}
-        <div className="bg-surface-card rounded-3xl shadow-sm border border-line-default overflow-hidden">
-          <div className="p-6 border-b border-line-default bg-surface/50">
-            <h3 className="font-semibold text-fg-base mb-4">Manage Categories & Budgets</h3>
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                aria-label="New category name"
-                placeholder="New category..."
-                value={newCatName}
-                onChange={(e) => setNewCatName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
-                className="flex-grow bg-surface-card border border-line-default px-4 py-2 rounded-xl text-[16px] focus:outline-none focus:ring-2 focus:ring-focus-ring"
-              />
-              <button
-                type="button"
-                aria-label="Add category"
-                onClick={handleAddCategory}
-                disabled={isAdding || !newCatName.trim()}
-                className="min-h-11 bg-action text-fg-on-action px-4 rounded-xl active:scale-95 disabled:opacity-50"
-              >
-                {isAdding ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
-              </button>
-            </div>
-          </div>
-          <div className="max-h-80 overflow-y-auto p-2">
-            {categories.map((cat) => {
-              const currentBudget = budgets.find(b => b.category === cat.name)?.limit_amount?.toString() || '';
+        <section className="rounded-2xl border border-line-subtle bg-surface-card p-5 shadow-sm">
+          <h2 id="theme-heading" className="mb-3 font-semibold text-fg-base">Appearance</h2>
+          <div role="radiogroup" aria-labelledby="theme-heading" className="flex gap-1 rounded-xl bg-surface-inset p-1">
+            {THEME_OPTIONS.map(({ value, label, Icon }) => {
+              const selected = themePreference === value;
               return (
-                <div key={cat.id} className="flex justify-between items-center p-3 rounded-xl">
-                  <span className="text-sm font-medium text-fg-mid flex-1 pr-3 leading-tight break-words">{cat.name}</span>
-                  <div className="flex items-center space-x-2 shrink-0">
-                    <BudgetInput initialValue={currentBudget} onSave={(val) => void setBudget(cat.name, val)} />
-                    <IconButton label={`Delete ${cat.name}`} onClick={() => setDeleteTarget(cat)} className="text-delete-icon"><X size={16} /></IconButton>
-                  </div>
-                </div>
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => setThemePreference(value)}
+                  className={`flex min-h-12 flex-1 flex-col items-center justify-center gap-1 rounded-lg text-xs font-semibold transition-colors ${
+                    selected ? "bg-surface-card text-fg-base shadow-sm" : "text-fg-muted"
+                  }`}
+                >
+                  <Icon size={16} />
+                  {label}
+                </button>
               );
             })}
           </div>
-        </div>
+        </section>
 
-        {/* 4. Account */}
-        <div className="bg-surface-card p-6 rounded-3xl shadow-sm border border-line-default">
-          <p className="text-fg-secondary mb-6 text-sm">Account: <span className="font-semibold text-fg-base">{user.email}</span></p>
-          <button onClick={handleLogout} className="w-full py-3 bg-destructive-bg text-destructive-fg rounded-xl font-semibold">Log Out</button>
-        </div>
+        <section className="rounded-2xl border border-line-subtle bg-surface-card shadow-sm">
+          <div className="border-b border-line-subtle p-5">
+            <div className="mb-1 flex items-baseline justify-between gap-3">
+              <h2 className="font-semibold text-fg-base">Categories</h2>
+              <span className="text-xs font-semibold text-fg-muted tabular-nums">
+                {pinnedNames.length}/{MAX_PINS} pinned
+              </span>
+            </div>
+            <p className="mb-4 text-xs text-fg-secondary">
+              {atLimit
+                ? `You've pinned ${MAX_PINS}. Unpin one to pin another.`
+                : `Pin up to ${MAX_PINS} for quick access on the Entry screen. Budgets are monthly and optional.`}
+            </p>
+            <form onSubmit={handleAddCategory} className="flex gap-2">
+              <input
+                type="text"
+                aria-label="New category name"
+                placeholder="New category"
+                enterKeyHint="done"
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                className="min-h-11 min-w-0 flex-1 rounded-xl border border-line-default bg-surface-card px-4 text-[16px] text-fg-base placeholder:text-fg-muted focus:outline-none focus:ring-2 focus:ring-focus-ring"
+              />
+              <button
+                type="submit"
+                aria-label="Add category"
+                disabled={isAdding || !newCatName.trim()}
+                className="flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-action px-3 text-fg-on-action transition-opacity active:opacity-80 disabled:opacity-40"
+              >
+                {isAdding ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
+              </button>
+            </form>
+          </div>
+
+          <ul className="divide-y divide-line-subtle">
+            {categories.map((cat) => {
+              const pinned = isPinned(cat.name);
+              const currentBudget = budgets.find(b => b.category === cat.name)?.limit_amount?.toString() ?? "";
+              return (
+                <li key={cat.id} className="flex items-center gap-1 py-2 pl-5 pr-2">
+                  <span className="min-w-0 flex-1 break-words pr-1 text-sm font-medium leading-tight text-fg-mid">{cat.name}</span>
+                  <IconButton
+                    label={`Pin ${cat.name}`}
+                    aria-pressed={pinned}
+                    disabled={!pinned && atLimit}
+                    onClick={() => togglePin(cat.name)}
+                    className={pinned ? "text-fg-base" : "text-delete-icon"}
+                  >
+                    <Pin size={18} fill={pinned ? "currentColor" : "none"} />
+                  </IconButton>
+                  <BudgetInput
+                    categoryName={cat.name}
+                    initialValue={currentBudget}
+                    onSave={(val) => setBudget(cat.name, val)}
+                  />
+                  <IconButton label={`Delete ${cat.name}`} onClick={() => setDeleteTarget(cat)} className="text-delete-icon">
+                    <X size={18} />
+                  </IconButton>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        <section className="rounded-2xl border border-line-subtle bg-surface-card p-5 shadow-sm">
+          <p className="mb-4 text-sm text-fg-secondary">
+            Signed in as <span className="font-semibold text-fg-base">{user.email}</span>
+          </p>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="min-h-11 w-full rounded-xl bg-destructive-bg font-semibold text-destructive-fg transition-opacity active:opacity-80"
+          >
+            Log out
+          </button>
+        </section>
 
       </div>
 

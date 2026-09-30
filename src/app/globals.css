@@ -14,16 +14,12 @@
   --surface:              #f9fafb;
   --surface-card:         #ffffff;
   --surface-inset:        #f3f4f6;
-  --surface-feature:      #0f172a;
-  --surface-overlay:      #f9fafb;
   --pressed:              #e5e7eb;
 
   --fg-base:              #111827;
   --fg-mid:               #374151;
   --fg-secondary:         #4b5563;
   --fg-muted:             #636b77;
-  --fg-on-feature:        #ffffff;
-  --fg-on-feature-dim:    #94a3b8;
   --fg-on-action:         #ffffff;
   --nav-bar:              rgba(255, 255, 255, 0.9);
   --nav-active:           #000000;
@@ -31,7 +27,6 @@
 
   --line-default:         #e5e7eb;
   --line-subtle:          #f3f4f6;
-  --line-feature:         #1e293b;
   --line-nav:             #e5e7eb;
 
   --action:               #000000;
@@ -43,7 +38,6 @@
   --positive:             #10b981;
   --positive-fg:          #047857;
   --on-positive:          #022c22;
-  --positive-tint:        rgba(16, 185, 129, 0.2);
   --negative:             #f87171;
   --negative-fg:          #dc2626;
   --negative-tint:        rgba(239, 68, 68, 0.15);
@@ -61,16 +55,12 @@
     --surface:            #111827;
     --surface-card:       #1f2937;
     --surface-inset:      #374151;
-    --surface-feature:    #0f172a;
-    --surface-overlay:    #111827;
     --pressed:            #4b5563;
 
     --fg-base:            #f9fafb;
     --fg-mid:             #d1d5db;
     --fg-secondary:       #c0c6ce;
     --fg-muted:           #a7aeb9;
-    --fg-on-feature:      #f9fafb;
-    --fg-on-feature-dim:  #94a3b8;
     --fg-on-action:       #111827;
     --nav-bar:            rgba(31, 41, 55, 0.95);
     --nav-active:         #ffffff;
@@ -78,7 +68,6 @@
 
     --line-default:       #374151;
     --line-subtle:        #1f2937;
-    --line-feature:       #1e293b;
     --line-nav:           #374151;
 
     --action:             #ffffff;
@@ -90,7 +79,6 @@
     --positive:           #10b981;
     --positive-fg:        #34d399;
     --on-positive:        #022c22;
-    --positive-tint:      rgba(16, 185, 129, 0.15);
     --negative:           #f87171;
     --negative-fg:        #f87171;
     --negative-tint:      rgba(239, 68, 68, 0.12);
@@ -106,16 +94,12 @@
   --surface:              #111827;
   --surface-card:         #1f2937;
   --surface-inset:        #374151;
-  --surface-feature:      #0f172a;
-  --surface-overlay:      #111827;
   --pressed:              #4b5563;
 
   --fg-base:              #f9fafb;
   --fg-mid:               #d1d5db;
   --fg-secondary:         #c0c6ce;
   --fg-muted:             #a7aeb9;
-  --fg-on-feature:        #f9fafb;
-  --fg-on-feature-dim:    #94a3b8;
   --fg-on-action:         #111827;
   --nav-bar:              rgba(31, 41, 55, 0.95);
   --nav-active:           #ffffff;
@@ -123,7 +107,6 @@
 
   --line-default:         #374151;
   --line-subtle:          #1f2937;
-  --line-feature:         #1e293b;
   --line-nav:             #374151;
 
   --action:               #ffffff;
@@ -135,7 +118,6 @@
   --positive:             #10b981;
   --positive-fg:          #34d399;
   --on-positive:          #022c22;
-  --positive-tint:        rgba(16, 185, 129, 0.15);
   --negative:             #f87171;
   --negative-fg:          #f87171;
   --negative-tint:        rgba(239, 68, 68, 0.12);
@@ -150,16 +132,12 @@
   --surface:              #f5efe6;
   --surface-card:         #fdfaf5;
   --surface-inset:        #ede0d0;
-  --surface-feature:      #3d2b1f;
-  --surface-overlay:      #f5efe6;
   --pressed:              #e3d3bf;
 
   --fg-base:              #2d1b0e;
   --fg-mid:               #4e3426;
   --fg-secondary:         #654a37;
   --fg-muted:             #7c5e47;
-  --fg-on-feature:        #fdf8f2;
-  --fg-on-feature-dim:    #c9ab90;
   --fg-on-action:         #fdf8f2;
   --nav-bar:              rgba(253, 250, 245, 0.92);
   --nav-active:           #2d1b0e;
@@ -167,7 +145,6 @@
 
   --line-default:         #d4b896;
   --line-subtle:          #ede0d0;
-  --line-feature:         #5c3d2e;
   --line-nav:             #d4b896;
 
   --action:               #3d2b1f;
@@ -179,7 +156,6 @@
   --positive:             #557a46;
   --positive-fg:          #46663a;
   --on-positive:          #ffffff;
-  --positive-tint:        rgba(85, 122, 70, 0.15);
   --negative:             #d9534f;
   --negative-fg:          #b53a36;
   --negative-tint:        rgba(217, 83, 79, 0.12);
@@ -199,16 +175,12 @@
   --color-surface:             var(--surface);
   --color-surface-card:        var(--surface-card);
   --color-surface-inset:       var(--surface-inset);
-  --color-surface-feature:     var(--surface-feature);
-  --color-surface-overlay:     var(--surface-overlay);
   --color-pressed:             var(--pressed);
 
   --color-fg-base:             var(--fg-base);
   --color-fg-mid:              var(--fg-mid);
   --color-fg-secondary:        var(--fg-secondary);
   --color-fg-muted:            var(--fg-muted);
-  --color-fg-on-feature:       var(--fg-on-feature);
-  --color-fg-on-feature-dim:   var(--fg-on-feature-dim);
   --color-fg-on-action:        var(--fg-on-action);
   --color-nav-bar:             var(--nav-bar);
   --color-nav-active:          var(--nav-active);
@@ -216,7 +188,6 @@
 
   --color-line-default:        var(--line-default);
   --color-line-subtle:         var(--line-subtle);
-  --color-line-feature:        var(--line-feature);
   --color-line-nav:            var(--line-nav);
 
   --color-action:              var(--action);
@@ -228,7 +199,6 @@
   --color-positive:            var(--positive);
   --color-positive-fg:         var(--positive-fg);
   --color-on-positive:         var(--on-positive);
-  --color-positive-tint:       var(--positive-tint);
   --color-negative:            var(--negative);
   --color-negative-fg:         var(--negative-fg);
   --color-negative-tint:       var(--negative-tint);
