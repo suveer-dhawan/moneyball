@@ -19,12 +19,13 @@ export interface MonthData {
   chartData: ChartItem[];
   paceData: {
     actual: { day: number; cumulative: number }[];
-    /** Month-end target the pace line climbs to: total budgets, else income, else 0. */
-    baseline: number;
-    baselineKind: 'budget' | 'income' | null;
+    /** Sum of monthly budgets (0 when none are set); the budget pace line climbs to this. */
+    budgetTotal: number;
+    /** Income logged this month; the income pace line climbs to this. */
+    incomeTotal: number;
     daysInMonth: number;
     currentDay: number;
-    /** null when there is no baseline to compare against. */
+    /** Compared against budget pace when budgets are set, else income pace; null with neither. */
     onTrack: boolean | null;
   };
 }
@@ -125,11 +126,9 @@ export function computeMonthData(
   const savingsRate = totalIncome > 0 ? ((totalIncome - totalSpent) / totalIncome) * 100 : null;
 
   const budgetTotal = totalBudget(budgets);
-  const baselineKind = budgetTotal > 0 ? 'budget' : totalIncome > 0 ? 'income' : null;
-  const baseline = baselineKind === 'budget' ? budgetTotal : baselineKind === 'income' ? totalIncome : 0;
+  const target = budgetTotal > 0 ? budgetTotal : totalIncome;
   const actualAtCurrentDay = actual.length > 0 ? actual[actual.length - 1].cumulative : 0;
-  const expectedPace = (baseline / daysInMonth) * currentDay;
-  const onTrack = baselineKind === null ? null : actualAtCurrentDay <= expectedPace;
+  const onTrack = target > 0 ? actualAtCurrentDay <= (target / daysInMonth) * currentDay : null;
 
   return {
     totalSpent,
@@ -139,8 +138,8 @@ export function computeMonthData(
     chartData,
     paceData: {
       actual,
-      baseline,
-      baselineKind,
+      budgetTotal,
+      incomeTotal: totalIncome,
       daysInMonth,
       currentDay,
       onTrack,

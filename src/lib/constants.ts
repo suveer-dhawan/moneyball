@@ -12,6 +12,7 @@ export const INSIGHT_COLORS = {
   none: 'var(--fg-muted)',
   paceActual: 'var(--positive)',
   paceLine: 'var(--fg-muted)',
+  incomePaceLine: 'var(--fg-mid)',
   incomeBar: 'var(--positive)',
   spentBar: 'var(--fg-mid)',
 } as const;

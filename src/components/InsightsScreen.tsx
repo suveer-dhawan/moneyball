@@ -129,7 +129,8 @@ export default function InsightsScreen({
 
   const { paceData, chartData, totalSpent, totalIncome, netSavings, savingsRate } = currentMonthData;
   const lastActual = paceData.actual.length > 0 ? paceData.actual[paceData.actual.length - 1] : null;
-  const yDomainMax = (Math.max(paceData.baseline, lastActual?.cumulative ?? 0) * 1.1) || 100;
+  const yDomainMax = (Math.max(paceData.budgetTotal, paceData.incomeTotal, lastActual?.cumulative ?? 0) * 1.1) || 100;
+  const perDay = (total: number) => formatAUD(Math.round(total / paceData.daysInMonth));
 
   const drillItem = chartData.find(item => item.name === drillCategory);
   const drillTotal = drillItem?.value ?? 0;
@@ -204,15 +205,27 @@ export default function InsightsScreen({
                       tick={AXIS_TICK}
                     />
                     <YAxis hide domain={[0, yDomainMax]} />
-                    {paceData.baselineKind && (
+                    {paceData.budgetTotal > 0 && (
                       <ReferenceLine
                         segment={[
                           { x: 1, y: 0 },
-                          { x: paceData.daysInMonth, y: paceData.baseline },
+                          { x: paceData.daysInMonth, y: paceData.budgetTotal },
                         ]}
                         stroke={INSIGHT_COLORS.paceLine}
-                        strokeDasharray="4 3"
+                        strokeDasharray="6 4"
                         strokeWidth={1.5}
+                      />
+                    )}
+                    {paceData.incomeTotal > 0 && (
+                      <ReferenceLine
+                        segment={[
+                          { x: 1, y: 0 },
+                          { x: paceData.daysInMonth, y: paceData.incomeTotal },
+                        ]}
+                        stroke={INSIGHT_COLORS.incomePaceLine}
+                        strokeDasharray="1 4"
+                        strokeLinecap="round"
+                        strokeWidth={2}
                       />
                     )}
                     <Area
@@ -247,12 +260,19 @@ export default function InsightsScreen({
                 <span className="flex items-center gap-1.5">
                   <span className="h-0.5 w-4 rounded-full bg-positive" />Spent so far
                 </span>
-                {paceData.baselineKind ? (
+                {paceData.budgetTotal > 0 && (
                   <span className="flex items-center gap-1.5">
                     <span className="w-4 border-t-2 border-dashed border-fg-muted" />
-                    {paceData.baselineKind === 'budget' ? 'Budget' : 'Income'} pace ({formatAUD(paceData.baseline)})
+                    Budget {perDay(paceData.budgetTotal)}/day
                   </span>
-                ) : (
+                )}
+                {paceData.incomeTotal > 0 && (
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-4 border-t-2 border-dotted border-fg-mid" />
+                    Income {perDay(paceData.incomeTotal)}/day
+                  </span>
+                )}
+                {paceData.budgetTotal === 0 && paceData.incomeTotal === 0 && (
                   <span>Set budgets or log income to see your pace</span>
                 )}
               </div>
