@@ -36,3 +36,5 @@ export interface AppUser {
   id: string;
   email: string;
 }
+
+export type Tab = "add" | "income" | "insights" | "settings";

@@ -1,75 +1,71 @@
-# 🎯 Moneyball
+# Moneyball
 
-Moneyball is a premium, mobile-first personal finance and budgeting application designed for speed, clarity, and actionable insights. Built with a focus on frictionless data entry and dynamic visualization, it allows users to track expenses in under 3 seconds and monitor monthly budget caps in real-time.
+A mobile-first budgeting app for logging spending quickly, installed to the
+iPhone home screen as a PWA. Each account is private; there is no shared data.
 
-## ✨ Features
+## What it does
 
-- **Lightning-Fast Entry:** An oversized, mobile-optimized numpad designed for 1-handed, 3-second transaction logging.
-- **Dynamic Insights Dashboard:** Visual monthly breakdowns utilizing interactive donut charts and smart category grouping.
-- **Proactive Budgeting:** Set custom monthly limits per category. Progress bars dynamically update and warn users visually (Amber at 80%, Red at >100%) as they approach their caps.
-- **Custom Category Engine:** Fully personalized transaction categories with smart drill-down capabilities (e.g., Grouping "Groceries - Coles" and "Groceries - Aldi" under a master "Groceries" view).
-- **Enterprise-Grade Security:** Full user authentication and database protection via PostgreSQL Row Level Security (RLS).
-- **Native iOS Feel:** Designed with Tailwind CSS to mimic native mobile applications, including frosted glass headers, hidden scrollbars, and fluid touch interactions.
+- **Entry** - a number pad for logging an expense, with up to four pinned
+  categories, an optional note, and a date up to 60 days back. Tap a recent
+  entry to edit it.
+- **Income** - log paychecks and other income, backdated up to 60 days.
+- **Insights** - per-month spending and savings, a cumulative pace chart,
+  spending by category against budget limits (amber from 80%, red over 100%),
+  and a six-month income vs spending trend.
+- **Settings** - theme (Auto, Light, Dark, Warm), pinned categories,
+  categories and monthly budget limits.
 
-## 🛠 Tech Stack
+Categories named `Group - Item` (e.g. `Groceries - Aldi`) are grouped under
+`Groceries` in Insights. A budget on the group applies to the whole group;
+otherwise the group's limit is the sum of its items' budgets.
 
-**Frontend:**
-- [Next.js](https://nextjs.org/) (App Router)
-- [React](https://reactjs.org/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [Recharts](https://recharts.org/) (Data Visualization)
-- [Lucide React](https://lucide.dev/) (Iconography)
+## Stack
 
-**Backend & Database:**
-- [Supabase](https://supabase.com/) (PostgreSQL Database)
-- Supabase Authentication
-- Row Level Security (RLS) Policies
+Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Supabase
+(Postgres + Auth), Recharts, lucide-react. Deployed on Vercel.
 
-**Deployment:**
-- [Vercel](https://vercel.com)
+## Local development
 
-## 🚀 Getting Started (Local Development)
+Requires Node.js 20+ and a Supabase project.
 
-### Prerequisites
-- Node.js 18+ 
-- A free [Supabase](https://supabase.com/) account.
+1. Install dependencies:
 
-### Installation
-
-1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/yourusername/moneyball.git](https://github.com/yourusername/moneyball.git)
-   cd moneyball
+   npm install
+   ```
 
-2. **Install dependencies:**
-    ```bash
-    npm install
+2. Create `.env.local` in the project root:
 
-3. **Set up Environment Variables:**
-Create a `.env.local` file in the root directory and add your Supabase project keys:
+   ```bash
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
 
-- NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-- NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+3. Create the tables below in Supabase, enable Row Level Security on each, and
+   add policies allowing `SELECT`, `INSERT`, `UPDATE` and `DELETE` where
+   `auth.uid() = user_id`.
 
-4. **Database Setup:**
-Run the following SQL queries in your Supabase SQL Editor to generate the necessary tables and security policies:
+4. Start the dev server:
 
-**Note**: Ensure Row Level Security (RLS) is enabled and policies are set to allow authenticated users to `INSERT`, `SELECT`, `UPDATE`, and `DELETE` their own rows (`auth.uid() = user_id`).
+   ```bash
+   npm run dev
+   ```
 
-- transactions (id, created_at, amount, category, notes, date, user_id)
-- user_categories (id, created_at, name, user_id)
-- budgets (id, created_at, category, limit_amount, user_id)
+Run `npm run build` and `npm run lint` before shipping changes.
 
-5. **Run the development server:**
-    ```bash
-    npm run dev
+## Database
 
-## 📱 Progressive Web App (PWA) Usage
-Moneyball is heavily optimized for mobile browsers. For the best experience on iOS:
+Every table also has `id`, `created_at` and `user_id`.
 
-1. Navigate to the deployed Vercel URL in Safari.
-2. Tap the Share icon at the bottom of the screen.
-3. Select Add to Home Screen.
-4. Launch Moneyball directly from your home screen for a fullscreen, native app experience.
----
-Designed and built for financial clarity.
+| Table             | Columns                      | Notes                          |
+| ----------------- | ---------------------------- | ------------------------------ |
+| `transactions`    | `amount`, `category`, `notes`, `date` |                       |
+| `income`          | `amount`, `source`, `date`   |                                |
+| `user_categories` | `name`                       | unique on `(user_id, name)`    |
+| `budgets`         | `category`, `limit_amount`   | unique on `(user_id, category)`|
+
+New accounts are seeded with a default category list on first load.
+
+## Installing on iPhone
+
+Open the deployed URL in Safari, tap Share, then **Add to Home Screen**.

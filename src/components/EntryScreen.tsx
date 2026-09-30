@@ -8,14 +8,11 @@ import CategoryPicker from "./CategoryPicker";
 import Toast from "./Toast";
 import ConfirmDialog from "./ConfirmDialog";
 import { useToast } from "../hooks/useToast";
+import { toLocalDateStr, daysAgoStr, relativeDayLabel } from "@/lib/dates";
 import { getCategorySubLabel } from "@/lib/categoryGroups";
 import type { AppUser, Category, Transaction } from "@/lib/types";
 
 const supabase = createClient();
-
-function toLocalDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
 
 export default function EntryScreen({
   user,
@@ -43,20 +40,8 @@ export default function EntryScreen({
   const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
 
   const todayStr = toLocalDateStr(new Date());
-  const minDateStr = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 60);
-    return toLocalDateStr(d);
-  }, []);
-  const yesterdayStr = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return toLocalDateStr(d);
-  }, []);
-  const chipLabel =
-    selectedDate === todayStr ? "Today" :
-    selectedDate === yesterdayStr ? "Yesterday" :
-    new Date(selectedDate + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const minDateStr = daysAgoStr(60);
+  const chipLabel = relativeDayLabel(selectedDate);
 
   const pinnedCategories = useMemo(
     () => pinnedNames.map((name) => categories.find((c) => c.name === name)).filter(Boolean) as Category[],

@@ -293,7 +293,7 @@ export default function InsightsScreen({
                 <YAxis hide />
                 <Tooltip
                   cursor={{ fill: 'var(--surface-inset)', opacity: 0.4 }}
-                  formatter={(value: any) => [`$${Number(value || 0).toFixed(2)}`, undefined]}
+                  formatter={(value) => [`$${Number(value ?? 0).toFixed(2)}`, undefined]}
                   contentStyle={{
                     borderRadius: '12px',
                     border: '1px solid var(--line-default)',

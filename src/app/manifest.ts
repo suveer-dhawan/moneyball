@@ -7,14 +7,12 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Fast, mobile-first personal budgeting",
     start_url: "/",
     display: "standalone",
-    background_color: "#0f172a",
-    theme_color: "#0f172a",
+    background_color: "#f9fafb",
+    theme_color: "#f9fafb",
     icons: [
-      {
-        src: "/icon",
-        sizes: "512x512",
-        type: "image/png",
-      },
+      { src: "/icon/192", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icon/512", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/icon/512", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }
